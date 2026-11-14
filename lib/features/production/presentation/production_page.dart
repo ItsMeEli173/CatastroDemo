@@ -117,7 +117,7 @@ class _SeasonTile extends ConsumerWidget {
             ? null
             : Text(
                 [
-                  if (range != null) range,
+                  ?range,
                   if (notes != null && notes.isNotEmpty) notes,
                 ].join('\n'),
               ),

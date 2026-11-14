@@ -127,7 +127,7 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
                         )
                       : ListView.separated(
                           itemCount: _photos!.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final photo = _photos![index];
@@ -192,7 +192,7 @@ class _PhotoThumbnail extends ConsumerWidget {
             width: 48,
             height: 48,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox(
+            errorBuilder: (_, _, _) => const SizedBox(
               width: 48,
               height: 48,
               child: Icon(Icons.broken_image_outlined),

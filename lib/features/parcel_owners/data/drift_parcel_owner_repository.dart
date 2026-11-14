@@ -4,8 +4,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/parcel_owner_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/parcel_owner.dart';
-import '../../domain/repositories/parcel_owner_repository.dart';
+import '../domain/entities/parcel_owner.dart';
+import '../domain/repositories/parcel_owner_repository.dart';
 
 /// Persistencia de la relación agricultor–parcela sobre Drift.
 class DriftParcelOwnerRepository implements ParcelOwnerRepository {

@@ -5,8 +5,8 @@ import '../domain/entities/parcel.dart';
 import '../domain/entities/parcel_vertex.dart';
 import '../domain/repositories/parcel_repository.dart';
 import '../domain/repositories/parcel_vertex_repository.dart';
-import 'drift_parcel_repository.dart';
-import 'drift_parcel_vertex_repository.dart';
+import 'package:catastrodemo/features/parcels/data/drift_parcel_repository.dart';
+import 'package:catastrodemo/features/parcels/data/drift_parcel_vertex_repository.dart';
 
 /// Repositorio de parcelas.
 final parcelRepositoryProvider = Provider<ParcelRepository>(
