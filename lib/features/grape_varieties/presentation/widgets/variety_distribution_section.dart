@@ -32,7 +32,7 @@ class VarietyDistributionSection extends ConsumerWidget {
       grapeVarietiesProvider(const VarietyFilter(includeInactive: true)),
     );
     final varietiesById = {
-      for (final variety in catalogue.valueOrNull ?? const <GrapeVariety>[])
+      for (final variety in catalogue.asData?.value ?? const <GrapeVariety>[])
         variety.id: variety,
     };
     return SectionCard(

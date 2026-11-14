@@ -5,10 +5,10 @@ import '../../../../core/database/daos/parcel_dao.dart';
 import '../../../../core/database/daos/parcel_vertex_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/storage/photo_storage.dart';
-import '../../domain/entities/parcel_vertex.dart';
-import '../../domain/repositories/parcel_vertex_repository.dart';
-import '../../domain/services/parcel_area_calculator.dart';
-import '../../domain/services/polygon_validator.dart';
+import '../domain/entities/parcel_vertex.dart';
+import '../domain/repositories/parcel_vertex_repository.dart';
+import '../domain/services/parcel_area_calculator.dart';
+import '../domain/services/polygon_validator.dart';
 
 /// Persistencia de la geometría de parcelas sobre Drift.
 class DriftParcelVertexRepository implements ParcelVertexRepository {

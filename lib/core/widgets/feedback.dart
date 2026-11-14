@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../errors/app_failure.dart';
+import '../errors/app_failure.dart';
 
 /// Muestra el mensaje de una falla de la aplicación o un mensaje genérico.
 void showFailure(BuildContext context, Object error) {
@@ -64,7 +64,9 @@ Future<bool> runGuarded(
     await action();
     return true;
   } catch (error) {
-    showFailure(context, error);
+    if (context.mounted) {
+      showFailure(context, error);
+    }
     return false;
   }
 }
