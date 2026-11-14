@@ -30,7 +30,7 @@ class HomePage extends ConsumerWidget {
                     value: farmerCount.when(
                       data: (value) => '$value',
                       loading: () => '…',
-                      error: (_, __) => '—',
+                      error: (_, _) => '—',
                     ),
                     icon: Icons.person_outline,
                   ),
@@ -42,7 +42,7 @@ class HomePage extends ConsumerWidget {
                     value: parcelCount.when(
                       data: (value) => '$value',
                       loading: () => '…',
-                      error: (_, __) => '—',
+                      error: (_, _) => '—',
                     ),
                     icon: Icons.landscape_outlined,
                   ),

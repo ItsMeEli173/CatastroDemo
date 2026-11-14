@@ -4,8 +4,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/grape_variety_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/grape_variety.dart';
-import '../../domain/repositories/grape_variety_repository.dart';
+import '../domain/entities/grape_variety.dart';
+import '../domain/repositories/grape_variety_repository.dart';
 
 /// Catálogo de variedades sobre Drift.
 class DriftGrapeVarietyRepository implements GrapeVarietyRepository {

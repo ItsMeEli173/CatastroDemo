@@ -18,8 +18,8 @@ Aplicar a toda creación de rama, push, merge, PR y operación de release en est
 - Ramas fijas: `main`, `qa` (o `sqa`), `dev`. Nunca eliminarlas ni renombrarlas.
 - Ramas temporales: `feature`, `release`, `bugfix`, `hotfix`. Siempre eliminarlas después del merge.
 - Los nombres de rama DEBEN ser cortos y SIEMPRE con el prefijo del tipo de rama y su número correspondiente: `feature/12-nombre-corto` (nunca `feature/cosas-varias-de-login-con-jwt-y-mas`).
-- `main`: solo push con autorización explícita o instrucción específica del usuario. Nunca hacer push directo.
-- `qa`/`sqa`: solo push cuando las pruebas automatizadas pasen.
+- `main`: push automático tras la promoción/validación correspondiente, sin requerir confirmación interactiva.
+- `qa`/`sqa`: push cuando las pruebas automatizadas pasen.
 - `dev`: push después de implementar cada cambio.
 - Los merges deben seguir la ruta de promoción; nunca fusionar una rama temporal directamente en `main`.
 
@@ -31,7 +31,7 @@ Aplicar a toda creación de rama, push, merge, PR y operación de release en est
 | Integración verificada por pruebas | `dev` | `qa` / `sqa` |
 | Candidato a release | `release/<num>-<slug>` | `qa` / `sqa` y luego `main` |
 | Defecto en una funcionalidad existente | `bugfix/<num>-<slug>` | `dev` |
-| Incidente de producción | `hotfix/<num>-<slug>` | `main` (con autorización) |
+| Incidente de producción | `hotfix/<num>-<slug>` | `main` y `dev` |
 
 ## Pasos de ejecución
 
@@ -39,9 +39,9 @@ Aplicar a toda creación de rama, push, merge, PR y operación de release en est
 2. Crear la rama desde la base correcta: `feature`/`bugfix` desde `dev`; `hotfix`/`release` desde `main`.
 3. Nombrarla con el prefijo del tipo + número + slug corto (`feature/12-nombre-corto`).
 4. Hacer commits con conventional commits acotados a esa rama, con el **mensaje en español**.
-5. Push según la puerta: después de implementar cada cambio → `dev`; después de pasar las pruebas → `qa` / `sqa`; solo con autorización explícita → `main`.
+5. Push según la puerta: después de implementar cada cambio → `dev`; después de pasar las pruebas → `qa` / `sqa`; tras completar la validación o release → `main` sin pedir confirmación adicional.
 6. Después del merge, eliminar la rama temporal.
 
 ## Contrato de salida
 
-Devolver: el nombre exacto de la rama creada, su base, el destino del PR/merge y qué puerta autorizó el push (`dev` / `qa` / `main` con autorización). Si falta la puerta, DETENERSE y reportar cuál falta; nunca hacer push.
+Devolver: el nombre exacto de la rama creada, su base, el destino del PR/merge y qué puerta autorizó el push (`dev` / `qa` / `main`). Si falta la puerta, DETENERSE y reportar cuál falta; nunca hacer push.

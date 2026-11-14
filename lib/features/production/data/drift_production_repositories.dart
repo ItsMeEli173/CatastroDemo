@@ -4,11 +4,11 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/production_daos.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/harvest_season.dart';
-import '../../domain/entities/measurement_unit.dart';
-import '../../domain/entities/production_estimate.dart';
-import '../../domain/repositories/production_repositories.dart';
-import '../../domain/services/production_math.dart';
+import '../domain/entities/harvest_season.dart';
+import '../domain/entities/measurement_unit.dart';
+import '../domain/entities/production_estimate.dart';
+import '../domain/repositories/production_repositories.dart';
+import '../domain/services/production_math.dart';
 
 /// Temporadas agrícolas sobre Drift.
 class DriftHarvestSeasonRepository implements HarvestSeasonRepository {

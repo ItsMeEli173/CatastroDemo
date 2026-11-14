@@ -16,7 +16,6 @@ import '../../parcel_owners/domain/entities/parcel_owner.dart';
 import '../../production/presentation/widgets/parcel_production_section.dart';
 import '../data/parcel_providers.dart';
 import '../domain/entities/parcel.dart';
-import '../domain/entities/parcel_vertex.dart';
 
 /// Detalle completo de una parcela con sus secciones relacionadas.
 class ParcelDetailPage extends ConsumerWidget {
@@ -180,7 +179,7 @@ class _OwnersSection extends ConsumerWidget {
     final owners = ref.watch(parcelOwnersProvider(parcel.id));
     final farmers = ref.watch(farmersProvider(''));
     final farmersById = <String, Farmer>{
-      for (final farmer in farmers.valueOrNull ?? const <Farmer>[])
+      for (final farmer in farmers.asData?.value ?? const <Farmer>[])
         farmer.id: farmer,
     };
     return SectionCard(
@@ -237,7 +236,7 @@ class _OwnersSection extends ConsumerWidget {
                         confirmLabel: 'Quitar',
                         destructive: true,
                       );
-                      if (!confirmed) return;
+                      if (!confirmed || !context.mounted) return;
                       await runGuarded(
                         context,
                         () => ref
@@ -344,7 +343,7 @@ class _AddOwnerDialogState extends ConsumerState<_AddOwnerDialog> {
     final percentage = raw.isEmpty ? null : Validators.parsePlainDecimal(raw);
     final informed = [
       ...widget.informedPercentages,
-      if (percentage != null) percentage,
+      ?percentage,
     ];
     final sum = informed.fold<double>(0, (total, value) => total + value);
     if (percentage != null && (sum - 100).abs() > 0.01) {

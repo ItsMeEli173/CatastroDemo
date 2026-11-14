@@ -4,8 +4,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/parcel_variety_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/parcel_variety.dart';
-import '../../domain/repositories/grape_variety_repository.dart';
+import '../domain/entities/parcel_variety.dart';
+import '../domain/repositories/grape_variety_repository.dart';
 
 /// Distribución de variedades por parcela sobre Drift.
 class DriftParcelVarietyRepository implements ParcelVarietyRepository {
