@@ -56,10 +56,10 @@ class _ParcelMapPageState extends ConsumerState<ParcelMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final parcel = ref.watch(parcelProvider(widget.parcelId)).valueOrNull;
+    final parcel = ref.watch(parcelProvider(widget.parcelId)).asData?.value;
     final vertices = ref
             .watch(parcelVerticesProvider(widget.parcelId))
-            .valueOrNull ??
+            .asData?.value ??
         const <ParcelVertex>[];
     final ring = vertices
         .map((vertex) => LatLng(vertex.latitude, vertex.longitude))
@@ -136,7 +136,6 @@ class _ParcelMapPageState extends ConsumerState<ParcelMapPage> {
                             .withValues(alpha: 0.18),
                         borderColor: Theme.of(context).colorScheme.primary,
                         borderStrokeWidth: 3,
-                        isFilled: true,
                       ),
                     ],
                   ),

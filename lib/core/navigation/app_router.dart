@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/data_export/presentation/data_export_page.dart';
-import '../../features/farmers/presentation/farmer_detail_page.dart';
+import 'package:catastrodemo/features/farmers/presentation/farmer_detail_page.dart';
 import '../../features/farmers/presentation/farmer_form_page.dart';
 import '../../features/farmers/presentation/farmers_list_page.dart';
 import '../../features/grape_varieties/presentation/grape_varieties_page.dart';

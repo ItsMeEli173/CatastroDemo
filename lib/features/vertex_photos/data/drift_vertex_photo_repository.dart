@@ -6,8 +6,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/vertex_photo_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/storage/photo_storage.dart';
-import '../../domain/entities/vertex_photo.dart';
-import '../../domain/repositories/vertex_photo_repository.dart';
+import '../domain/entities/vertex_photo.dart';
+import '../domain/repositories/vertex_photo_repository.dart';
 
 /// Metadatos de fotografías sobre Drift y binarios en almacenamiento privado.
 class DriftVertexPhotoRepository implements VertexPhotoRepository {

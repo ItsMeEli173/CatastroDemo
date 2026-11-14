@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/navigation/app_routes.dart';
 import '../../../core/widgets/async_value_view.dart';
-import '../../../core/widgets/feedback.dart';
 import '../data/farmer_providers.dart';
 import '../domain/entities/farmer.dart';
 import 'farmer_actions.dart';

@@ -1,11 +1,11 @@
-﻿import 'package:drift/drift.dart';
+import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/farmer_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/farmer.dart';
-import '../../domain/repositories/farmer_repository.dart';
+import '../domain/entities/farmer.dart';
+import '../domain/repositories/farmer_repository.dart';
 
 /// Persistencia de agricultores sobre Drift.
 class DriftFarmerRepository implements FarmerRepository {
@@ -24,7 +24,7 @@ class DriftFarmerRepository implements FarmerRepository {
   @override
   Future<Farmer?> findById(String id) async {
     final row = await _dao.findById(id);
-    return row == null ? null : row.toFarmerEntity();
+    return row?.toFarmerEntity();
   }
 
   @override

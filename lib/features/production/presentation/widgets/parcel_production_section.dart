@@ -54,19 +54,19 @@ class ParcelProductionSection extends ConsumerWidget {
         builder: (data) => _EstimatesBody(
           estimates: data,
           seasonsById: {
-            for (final season in seasons.valueOrNull ?? const <HarvestSeason>[])
+            for (final season in seasons.asData?.value ?? const <HarvestSeason>[])
               season.id: season,
           },
           unitsById: {
-            for (final unit in units.valueOrNull ?? const <MeasurementUnit>[])
+            for (final unit in units.asData?.value ?? const <MeasurementUnit>[])
               unit.id: unit,
           },
           varietiesById: {
             for (final variety
-                in catalogue.valueOrNull ?? const <GrapeVariety>[])
+                in catalogue.asData?.value ?? const <GrapeVariety>[])
               variety.id: variety,
           },
-          links: links.valueOrNull ?? const <ParcelVariety>[],
+          links: links.asData?.value ?? const <ParcelVariety>[],
         ),
       ),
     );

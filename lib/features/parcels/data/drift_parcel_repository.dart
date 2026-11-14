@@ -1,4 +1,4 @@
-﻿import 'package:drift/drift.dart';
+import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/parcel_dao.dart';
@@ -7,9 +7,9 @@ import '../../../../core/errors/app_failure.dart';
 import '../../../../core/geo/geo_point.dart';
 import '../../../../core/storage/photo_storage.dart';
 import '../../../../core/validation/validators.dart';
-import '../../domain/entities/parcel.dart';
-import '../../domain/repositories/parcel_repository.dart';
-import '../../domain/services/polygon_validator.dart';
+import '../domain/entities/parcel.dart';
+import '../domain/repositories/parcel_repository.dart';
+import '../domain/services/polygon_validator.dart';
 
 /// Persistencia de parcelas sobre Drift.
 class DriftParcelRepository implements ParcelRepository {
@@ -64,19 +64,19 @@ class DriftParcelRepository implements ParcelRepository {
   Future<void> save(Parcel parcel) async {
     final codeError = Validators.requiredCode(
       parcel.code,
-      message: 'Ingresa el código de la parcela.',
+      message: 'Ingresa el c�digo de la parcela.',
       maxLength: 40,
     );
     if (codeError != null) throw ValidationFailure(codeError);
     final declaredArea = parcel.declaredAreaM2;
     if (declaredArea != null && (!declaredArea.isFinite || declaredArea < 0)) {
       throw const ValidationFailure(
-        'La superficie declarada debe ser un número mayor o igual a cero.',
+        'La superficie declarada debe ser un n�mero mayor o igual a cero.',
       );
     }
     final duplicate = await _parcelDao.findByCode(parcel.code);
     if (duplicate != null && duplicate.id != parcel.id) {
-      throw const ValidationFailure('Ya existe una parcela con ese código.');
+      throw const ValidationFailure('Ya existe una parcela con ese c�digo.');
     }
     try {
       await _parcelDao.upsert(
