@@ -27,7 +27,7 @@ Diseñada y optimizada para operar de manera autónoma en campo sobre dispositiv
 
 ---
 
-##  Visión General
+## Visión General
 
 **CatastroDemo** resuelve el problema de registro y validación catastral agrícola en zonas rurales sin conectividad a Internet. Proporciona:
 - Códigos correlativos autogenerados (`AGR-001`, `PAR-001`).
@@ -39,7 +39,7 @@ Diseñada y optimizada para operar de manera autónoma en campo sobre dispositiv
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Lenguaje:** [Dart 3.x](https://dart.dev/)
 - **Framework UI:** [Flutter 3.x](https://flutter.dev/) (Material Design 3)
@@ -55,7 +55,7 @@ Diseñada y optimizada para operar de manera autónoma en campo sobre dispositiv
 
 ---
 
-## 🏛 Arquitectura y Diseño
+## Arquitectura y Diseño
 
 El proyecto sigue una arquitectura limpia orientada al dominio (**Clean Architecture / Feature-First**):
 
@@ -258,6 +258,15 @@ erDiagram
    flutter build apk --release
    ```
    *El instalable se generará en `build/app/outputs/flutter-apk/app-release.apk`.*
+
+### Permisos de Android
+
+La aplicación declara los siguientes permisos en `android/app/src/main/AndroidManifest.xml`:
+
+- `ACCESS_FINE_LOCATION` y `ACCESS_COARSE_LOCATION`: captura GPS de los vértices.
+- `CAMERA`: fotografías de parcelas y de vértices.
+- `READ_MEDIA_IMAGES` (Android 13+): selección de fotografías desde la galería.
+- `READ_EXTERNAL_STORAGE` (Android 12 y anteriores, `maxSdkVersion="32"`): lectura de imágenes en versiones previas.
 
 ---
 
