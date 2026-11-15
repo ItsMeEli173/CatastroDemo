@@ -107,8 +107,8 @@ class DriftParcelRepository implements ParcelRepository {
       );
     } on AppFailure {
       rethrow;
-    } catch (_) {
-      throw const StorageFailure('No se pudo guardar la parcela.');
+    } catch (e) {
+      throw StorageFailure('No se pudo guardar la parcela: $e');
     }
   }
 
