@@ -498,7 +498,7 @@ class _EstimateDialogState extends ConsumerState<_EstimateDialog> {
                   _unitId = value;
                   final factor = _selectedUnit?.kilogramsEquivalent;
                   if (factor != null) {
-                    _factor.text = Formatters.quantity(factor);
+                    _factor.text = Formatters.plainNumber(factor);
                   }
                 });
               },

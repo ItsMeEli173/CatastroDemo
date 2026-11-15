@@ -34,6 +34,14 @@ abstract final class Formatters {
     return '${decimal(value, fractionDigits: fractionDigits)} %';
   }
 
+  /// Formato plano sin separador de miles para campos editables (e.g. 1000 o 12.5).
+  static String plainNumber(double? value, {int maxDecimals = 4}) {
+    if (value == null || !value.isFinite) return '';
+    if (value % 1 == 0) return value.toInt().toString();
+    final fixed = value.toStringAsFixed(maxDecimals);
+    return fixed.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+  }
+
   static String quantity(double? value) =>
       value == null ? '—' : decimal(value, fractionDigits: 2);
 
