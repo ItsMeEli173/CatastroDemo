@@ -138,8 +138,8 @@ class _ParcelTile extends ConsumerWidget {
               spacing: 12,
               runSpacing: 4,
               children: [
-                Text('Calculada: ${Formatters.hectares(parcel.calculatedAreaM2)}'),
-                Text('Declarada: ${Formatters.hectares(parcel.declaredAreaM2)}'),
+                Text('Calculada: ${Formatters.area(parcel.calculatedAreaM2)} (${Formatters.hectares(parcel.calculatedAreaM2)})'),
+                Text('Declarada: ${Formatters.area(parcel.declaredAreaM2)} (${Formatters.hectares(parcel.declaredAreaM2)})'),
               ],
             ),
             const SizedBox(height: 4),

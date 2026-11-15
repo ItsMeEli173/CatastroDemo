@@ -70,7 +70,7 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
   late final TextEditingController _declaredArea;
   late final TextEditingController _notes;
 
-  AreaUnit _selectedUnit = AreaUnit.hectares;
+  AreaUnit _selectedUnit = AreaUnit.squareMeters;
   String? _selectedFarmerId;
   String? _imagePath;
   String? _tempPickedImageSource;
@@ -86,9 +86,9 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
     final initialAreaM2 = parcel?.declaredAreaM2;
     if (initialAreaM2 != null) {
       _declaredArea = TextEditingController(
-        text: Formatters.decimal(initialAreaM2 / 10000),
+        text: Formatters.plainNumber(initialAreaM2),
       );
-      _selectedUnit = AreaUnit.hectares;
+      _selectedUnit = AreaUnit.squareMeters;
     } else {
       _declaredArea = TextEditingController();
     }
