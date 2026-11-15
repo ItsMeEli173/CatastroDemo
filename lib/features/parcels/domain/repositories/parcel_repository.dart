@@ -8,6 +8,8 @@ abstract interface class ParcelRepository {
 
   Future<Parcel?> findById(String id);
 
+  Stream<Parcel?> watchById(String id);
+
   Future<Parcel?> findByCode(String code);
 
   Stream<List<Parcel>> watchByFarmer(String farmerId);
