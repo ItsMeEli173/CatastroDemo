@@ -307,6 +307,5 @@ El repositorio sigue una adaptación estricta de **Gitflow**:
 
 Para consultas técnicas, soporte o información sobre el proyecto:
 
-- **Autor:** Elias Aparicio Romero
 - **Correo Electrónico:** [elias.aparicio.romero@gmail.com](mailto:elias.aparicio.romero@gmail.com)
 - **Repositorio:** [github.com/ItsMeEli173/CatastroDemo](https://github.com/ItsMeEli173/CatastroDemo)
