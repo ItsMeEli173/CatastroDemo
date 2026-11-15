@@ -11,6 +11,8 @@ import '../../vertex_photos/data/vertex_photo_providers.dart';
 import '../../vertex_photos/presentation/vertex_photo_dialog.dart';
 import '../data/parcel_providers.dart';
 import '../domain/entities/parcel_vertex.dart';
+import '../domain/services/parcel_area_calculator.dart';
+import '../domain/services/polygon_validator.dart';
 
 /// Editor de vértices GPS y manuales con reordenamiento y fotografías.
 class ParcelVerticesPage extends ConsumerStatefulWidget {
@@ -194,9 +196,17 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
     );
   }
 
+  double? _calculatePreviewArea(List<ParcelVertex>? vertices) {
+    if (vertices == null || vertices.length < 3) return null;
+    final ring = vertices.map((v) => v.point).toList();
+    final validation = PolygonValidator.validate(ring);
+    return validation.isValid ? ParcelAreaCalculator.areaM2(ring) : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final vertices = _vertices;
+    final previewAreaM2 = _calculatePreviewArea(vertices);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vértices'),
@@ -247,13 +257,10 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
                 )
               : Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        'El orden define el contorno del polígono. La '
-                        'superficie se recalcula al guardar.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                    _VertexAreaBanner(
+                      previewAreaM2: previewAreaM2,
+                      vertexCount: vertices.length,
+                      isDirty: _dirty,
                     ),
                     Expanded(
                       child: ListView.builder(
@@ -326,6 +333,98 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
                     ),
                   ],
                 ),
+    );
+  }
+}
+
+
+/// Banner que muestra la superficie calculada en tiempo real (en memoria).
+class _VertexAreaBanner extends StatelessWidget {
+  const _VertexAreaBanner({
+    required this.previewAreaM2,
+    required this.vertexCount,
+    required this.isDirty,
+  });
+
+  final double? previewAreaM2;
+  final int vertexCount;
+  final bool isDirty;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final area = previewAreaM2;
+
+    if (vertexCount < 3) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          'El orden define el contorno del polígono. Se necesitan al menos 3 vértices.',
+          style: theme.textTheme.bodySmall,
+        ),
+      );
+    }
+
+    final String areaText;
+    if (area != null) {
+      areaText = '${Formatters.area(area)}  (${Formatters.hectares(area)})';
+    } else {
+      areaText = 'Polígono no válido (vértices repetidos o cruzados)';
+    }
+
+    final isValid = area != null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isValid
+            ? colorScheme.primaryContainer.withAlpha(80)
+            : colorScheme.errorContainer.withAlpha(80),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isValid ? colorScheme.primary : colorScheme.error,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isValid ? Icons.straighten_outlined : Icons.warning_amber_rounded,
+            size: 18,
+            color: isValid ? colorScheme.primary : colorScheme.error,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Superficie estimada',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: isValid ? colorScheme.primary : colorScheme.error,
+                  ),
+                ),
+                Text(
+                  areaText,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isValid ? colorScheme.onSurface : colorScheme.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isDirty)
+            Chip(
+              label: const Text('Sin guardar'),
+              visualDensity: VisualDensity.compact,
+              side: BorderSide.none,
+              backgroundColor: colorScheme.tertiaryContainer,
+            ),
+        ],
+      ),
     );
   }
 }

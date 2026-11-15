@@ -53,6 +53,9 @@ class ParcelDao extends DatabaseAccessor<AppDatabase> with _$ParcelDaoMixin {
   Future<ParcelRow?> findById(String id) =>
       (select(parcels)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Stream<ParcelRow?> watchById(String id) =>
+      (select(parcels)..where((t) => t.id.equals(id))).watchSingleOrNull();
+
   Future<ParcelRow?> findByCode(String code) =>
       (select(parcels)..where((t) => t.code.lower().equals(code.trim().toLowerCase())))
           .getSingleOrNull();

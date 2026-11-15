@@ -35,6 +35,10 @@ class DriftParcelRepository implements ParcelRepository {
           .toList();
 
   @override
+  Stream<Parcel?> watchById(String id) =>
+      _parcelDao.watchById(id).map((row) => row?.toParcelEntity());
+
+  @override
   Future<Parcel?> findById(String id) async {
     final row = await _parcelDao.findById(id);
     return row?.toParcelEntity();
