@@ -80,19 +80,19 @@ class DriftParcelRepository implements ParcelRepository {
   Future<void> save(Parcel parcel) async {
     final codeError = Validators.requiredCode(
       parcel.code,
-      message: 'Ingresa el c�digo de la parcela.',
+      message: 'Ingresa el código de la parcela.',
       maxLength: 40,
     );
     if (codeError != null) throw ValidationFailure(codeError);
     final declaredArea = parcel.declaredAreaM2;
     if (declaredArea != null && (!declaredArea.isFinite || declaredArea < 0)) {
       throw const ValidationFailure(
-        'La superficie declarada debe ser un n�mero mayor o igual a cero.',
+        'La superficie declarada debe ser un número mayor o igual a cero.',
       );
     }
     final duplicate = await _parcelDao.findByCode(parcel.code);
     if (duplicate != null && duplicate.id != parcel.id) {
-      throw const ValidationFailure('Ya existe una parcela con ese c�digo.');
+      throw const ValidationFailure('Ya existe una parcela con ese código.');
     }
     try {
       await _parcelDao.upsert(

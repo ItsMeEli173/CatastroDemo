@@ -74,27 +74,27 @@ class _FarmerBody extends ConsumerWidget {
             children: [
               DetailRow(
                 label: 'Documento',
-                value: farmer.documentNumber ?? '�',
+                value: farmer.documentNumber ?? '—',
                 icon: Icons.badge_outlined,
               ),
               DetailRow(
-                label: 'Tel�fono',
-                value: farmer.phone ?? '�',
+                label: 'Teléfono',
+                value: farmer.phone ?? '—',
                 icon: Icons.phone_outlined,
               ),
               DetailRow(
                 label: 'Correo',
-                value: farmer.email ?? '�',
+                value: farmer.email ?? '—',
                 icon: Icons.mail_outline,
               ),
               DetailRow(
                 label: 'Localidad',
-                value: farmer.locality ?? '�',
+                value: farmer.locality ?? '—',
                 icon: Icons.place_outlined,
               ),
               DetailRow(
-                label: 'Direcci�n',
-                value: farmer.address ?? '�',
+                label: 'Dirección',
+                value: farmer.address ?? '—',
                 icon: Icons.home_outlined,
               ),
               if (farmer.notes != null && farmer.notes!.isNotEmpty)
@@ -125,7 +125,7 @@ class _FarmerBody extends ConsumerWidget {
           child: AsyncValueView<List<ParcelOwner>>(
             value: links,
             isEmpty: (data) => data.isEmpty,
-            emptyMessage: 'Este agricultor a�n no tiene parcelas asociadas.',
+            emptyMessage: 'Este agricultor aún no tiene parcelas asociadas.',
             onRetry: () =>
                 ref.invalidate(farmerParcelLinksProvider(farmer.id)),
             builder: (data) => _OwnershipList(
@@ -208,8 +208,8 @@ class _OwnershipList extends ConsumerWidget {
             title: Text(byId[link.parcelId]?.displayName ?? 'Parcela'),
             subtitle: Text(
               link.ownershipPercentage == null
-                  ? 'Participaci�n no informada'
-                  : 'Participaci�n ${Formatters.percent(link.ownershipPercentage)}',
+                  ? 'Participación no informada'
+                  : 'Participación ${Formatters.percent(link.ownershipPercentage)}',
             ),
             onTap: () => AppRoutes.push<void>(
               context,
@@ -217,14 +217,14 @@ class _OwnershipList extends ConsumerWidget {
               arguments: ParcelDetailArgs(parcelId: link.parcelId),
             ),
             trailing: IconButton(
-              tooltip: 'Quitar v�nculo',
+              tooltip: 'Quitar vínculo',
               icon: const Icon(Icons.link_off),
               onPressed: () async {
                 final confirmed = await confirmAction(
                   context,
-                  title: 'Quitar v�nculo',
+                  title: 'Quitar vínculo',
                   message: 'La parcela y sus datos no se eliminan; solo se '
-                      'quita la relaci�n con este agricultor.',
+                      'quita la relación con este agricultor.',
                   confirmLabel: 'Quitar',
                   destructive: true,
                 );
@@ -237,7 +237,7 @@ class _OwnershipList extends ConsumerWidget {
                 );
                 if (done && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('V�nculo eliminado.')),
+                    const SnackBar(content: Text('Vínculo eliminado.')),
                   );
                 }
               },
@@ -314,9 +314,9 @@ class _LinkParcelDialogState extends ConsumerState<_LinkParcelDialog> {
     if (percentage != null && (sum - 100).abs() > 0.01) {
       final proceed = await confirmAction(
         context,
-        title: 'Participaci�n distinta de 100 %',
-        message: 'La suma de participaciones informadas quedar�a en '
-            '${Formatters.percent(sum)}. �Deseas continuar?',
+        title: 'Participación distinta de 100 %',
+        message: 'La suma de participaciones informadas quedaría en '
+            '${Formatters.percent(sum)}. ¿Deseas continuar?',
         confirmLabel: 'Continuar',
       );
       if (!proceed || !mounted) return;
@@ -364,7 +364,7 @@ class _LinkParcelDialogState extends ConsumerState<_LinkParcelDialog> {
           TextField(
             controller: _percentage,
             decoration: const InputDecoration(
-              labelText: 'Participaci�n (%)',
+              labelText: 'Participación (%)',
               helperText: 'Opcional, entre 0 y 100',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -378,21 +378,21 @@ class _LinkParcelDialogState extends ConsumerState<_LinkParcelDialog> {
         ),
         FilledButton(
           onPressed: _saving || _parcelId == null ? null : _save,
-          child: Text(_saving ? 'Guardando�' : 'Vincular'),
+          child: Text(_saving ? 'Guardando…' : 'Vincular'),
         ),
       ],
     );
   }
 }
 
-/// Validaci�n local del porcentaje con mensajes de la capa compartida.
+/// Validación local del porcentaje con mensajes de la capa compartida.
 abstract final class ValidatorsPercentage {
   static String? validate(String value) {
     final text = value.trim();
     if (text.isEmpty) return null;
     final parsed = Validators.parsePlainDecimal(text);
     if (parsed == null || parsed < 0 || parsed > 100) {
-      return 'La participaci�n debe estar entre 0 y 100.';
+      return 'La participación debe estar entre 0 y 100.';
     }
     return null;
   }
