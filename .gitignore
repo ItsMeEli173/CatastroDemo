@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Artefactos locales del agente: rutas absolutas y datos de la máquina del desarrollador
+.atl/
+.agents/
+odd/
