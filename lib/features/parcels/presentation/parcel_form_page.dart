@@ -385,10 +385,49 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
                     ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     validator: (value) => Validators.nonNegativeDecimal(
-                      value,
-                      message: 'Ingresa una superficie válida.',
+                        value,
+                        message: 'Ingresa una superficie válida.',
+                      ),
                     ),
-                  ),
+                    Builder(
+                      builder: (context) {
+                        final val = Validators.parsePlainDecimal(_declaredArea.text);
+                        if (val == null || val <= 0) return const SizedBox.shrink();
+                        final m2 = _selectedUnit == AreaUnit.hectares ? val * 10000 : val;
+                        return Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(120),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.sync_alt,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _selectedUnit == AreaUnit.hectares
+                                      ? 'Equivale a: ${Formatters.area(m2)} (base en m²)'
+                                      : 'Equivale a: ${Formatters.hectares(m2)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
