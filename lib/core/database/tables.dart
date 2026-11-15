@@ -41,6 +41,7 @@ class Parcels extends Table {
   RealColumn get declaredAreaM2 => real().nullable()();
   RealColumn get calculatedAreaM2 => real().nullable()();
   TextColumn get status => textEnum<ParcelStatus>()();
+  TextColumn get imagePath => text().nullable()();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

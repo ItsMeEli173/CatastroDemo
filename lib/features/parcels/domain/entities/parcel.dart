@@ -27,6 +27,7 @@ class Parcel {
     this.name,
     this.declaredAreaM2,
     this.calculatedAreaM2,
+    this.imagePath,
     this.notes,
   });
 
@@ -36,6 +37,7 @@ class Parcel {
   final double? declaredAreaM2;
   final double? calculatedAreaM2;
   final ParcelStatus status;
+  final String? imagePath;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;

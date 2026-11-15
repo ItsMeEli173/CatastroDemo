@@ -10,6 +10,9 @@ abstract interface class FarmerRepository {
 
   Future<int> count();
 
+  /// Genera el siguiente código correlativo de agricultor (ej. AGR-001).
+  Future<String> nextCode();
+
   Future<void> save(Farmer farmer);
 
   /// Falla con [InUseFailure] si el agricultor tiene parcelas asociadas.
