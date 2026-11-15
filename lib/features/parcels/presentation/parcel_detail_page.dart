@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/di/core_providers.dart';
 import '../../../core/formatting/formatters.dart';
 import '../../../core/navigation/app_routes.dart';
 import '../../../core/validation/validators.dart';
@@ -90,7 +93,31 @@ class _ParcelBody extends ConsumerWidget {
             visualDensity: VisualDensity.compact,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (parcel.imagePath != null) ...[
+                FutureBuilder<File?>(
+                  future: ref.read(photoStorageProvider).resolve(parcel.imagePath!),
+                  builder: (context, snap) {
+                    final file = snap.data;
+                    if (file != null && file.existsSync()) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            file,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
               DetailRow(label: 'Código', value: parcel.code),
               if (parcel.name != null && parcel.name!.isNotEmpty)
                 DetailRow(label: 'Nombre', value: parcel.name!),

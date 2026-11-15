@@ -740,6 +740,17 @@ class $ParcelsTable extends Parcels with TableInfo<$ParcelsTable, ParcelRow> {
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       ).withConverter<ParcelStatus>($ParcelsTable.$converterstatus);
+  static const VerificationMeta _imagePathMeta = const VerificationMeta(
+    'imagePath',
+  );
+  @override
+  late final GeneratedColumn<String> imagePath = GeneratedColumn<String>(
+    'image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -779,6 +790,7 @@ class $ParcelsTable extends Parcels with TableInfo<$ParcelsTable, ParcelRow> {
     declaredAreaM2,
     calculatedAreaM2,
     status,
+    imagePath,
     notes,
     createdAt,
     updatedAt,
@@ -830,6 +842,12 @@ class $ParcelsTable extends Parcels with TableInfo<$ParcelsTable, ParcelRow> {
           data['calculated_area_m2']!,
           _calculatedAreaM2Meta,
         ),
+      );
+    }
+    if (data.containsKey('image_path')) {
+      context.handle(
+        _imagePathMeta,
+        imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
       );
     }
     if (data.containsKey('notes')) {
@@ -893,6 +911,10 @@ class $ParcelsTable extends Parcels with TableInfo<$ParcelsTable, ParcelRow> {
           data['${effectivePrefix}status'],
         )!,
       ),
+      imagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path'],
+      ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
@@ -924,6 +946,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
   final double? declaredAreaM2;
   final double? calculatedAreaM2;
   final ParcelStatus status;
+  final String? imagePath;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -934,6 +957,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
     this.declaredAreaM2,
     this.calculatedAreaM2,
     required this.status,
+    this.imagePath,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -957,6 +981,9 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
         $ParcelsTable.$converterstatus.toSql(status),
       );
     }
+    if (!nullToAbsent || imagePath != null) {
+      map['image_path'] = Variable<String>(imagePath);
+    }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
@@ -977,6 +1004,9 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
           ? const Value.absent()
           : Value(calculatedAreaM2),
       status: Value(status),
+      imagePath: imagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePath),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -999,6 +1029,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
       status: $ParcelsTable.$converterstatus.fromJson(
         serializer.fromJson<String>(json['status']),
       ),
+      imagePath: serializer.fromJson<String?>(json['imagePath']),
       notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -1016,6 +1047,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
       'status': serializer.toJson<String>(
         $ParcelsTable.$converterstatus.toJson(status),
       ),
+      'imagePath': serializer.toJson<String?>(imagePath),
       'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -1029,6 +1061,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
     Value<double?> declaredAreaM2 = const Value.absent(),
     Value<double?> calculatedAreaM2 = const Value.absent(),
     ParcelStatus? status,
+    Value<String?> imagePath = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -1043,6 +1076,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
         ? calculatedAreaM2.value
         : this.calculatedAreaM2,
     status: status ?? this.status,
+    imagePath: imagePath.present ? imagePath.value : this.imagePath,
     notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -1059,6 +1093,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
           ? data.calculatedAreaM2.value
           : this.calculatedAreaM2,
       status: data.status.present ? data.status.value : this.status,
+      imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -1074,6 +1109,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
           ..write('declaredAreaM2: $declaredAreaM2, ')
           ..write('calculatedAreaM2: $calculatedAreaM2, ')
           ..write('status: $status, ')
+          ..write('imagePath: $imagePath, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -1089,6 +1125,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
     declaredAreaM2,
     calculatedAreaM2,
     status,
+    imagePath,
     notes,
     createdAt,
     updatedAt,
@@ -1103,6 +1140,7 @@ class ParcelRow extends DataClass implements Insertable<ParcelRow> {
           other.declaredAreaM2 == this.declaredAreaM2 &&
           other.calculatedAreaM2 == this.calculatedAreaM2 &&
           other.status == this.status &&
+          other.imagePath == this.imagePath &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1115,6 +1153,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
   final Value<double?> declaredAreaM2;
   final Value<double?> calculatedAreaM2;
   final Value<ParcelStatus> status;
+  final Value<String?> imagePath;
   final Value<String?> notes;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -1126,6 +1165,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
     this.declaredAreaM2 = const Value.absent(),
     this.calculatedAreaM2 = const Value.absent(),
     this.status = const Value.absent(),
+    this.imagePath = const Value.absent(),
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1138,6 +1178,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
     this.declaredAreaM2 = const Value.absent(),
     this.calculatedAreaM2 = const Value.absent(),
     required ParcelStatus status,
+    this.imagePath = const Value.absent(),
     this.notes = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -1154,6 +1195,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
     Expression<double>? declaredAreaM2,
     Expression<double>? calculatedAreaM2,
     Expression<String>? status,
+    Expression<String>? imagePath,
     Expression<String>? notes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -1166,6 +1208,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
       if (declaredAreaM2 != null) 'declared_area_m2': declaredAreaM2,
       if (calculatedAreaM2 != null) 'calculated_area_m2': calculatedAreaM2,
       if (status != null) 'status': status,
+      if (imagePath != null) 'image_path': imagePath,
       if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -1180,6 +1223,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
     Value<double?>? declaredAreaM2,
     Value<double?>? calculatedAreaM2,
     Value<ParcelStatus>? status,
+    Value<String?>? imagePath,
     Value<String?>? notes,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -1192,6 +1236,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
       declaredAreaM2: declaredAreaM2 ?? this.declaredAreaM2,
       calculatedAreaM2: calculatedAreaM2 ?? this.calculatedAreaM2,
       status: status ?? this.status,
+      imagePath: imagePath ?? this.imagePath,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1222,6 +1267,9 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
         $ParcelsTable.$converterstatus.toSql(status.value),
       );
     }
+    if (imagePath.present) {
+      map['image_path'] = Variable<String>(imagePath.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -1246,6 +1294,7 @@ class ParcelsCompanion extends UpdateCompanion<ParcelRow> {
           ..write('declaredAreaM2: $declaredAreaM2, ')
           ..write('calculatedAreaM2: $calculatedAreaM2, ')
           ..write('status: $status, ')
+          ..write('imagePath: $imagePath, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -6032,6 +6081,7 @@ typedef $$ParcelsTableCreateCompanionBuilder = ParcelsCompanion Function({
   Value<double?> declaredAreaM2,
   Value<double?> calculatedAreaM2,
   required ParcelStatus status,
+  Value<String?> imagePath,
   Value<String?> notes,
   required DateTime createdAt,
   required DateTime updatedAt,
@@ -6044,6 +6094,7 @@ typedef $$ParcelsTableUpdateCompanionBuilder = ParcelsCompanion Function({
   Value<double?> declaredAreaM2,
   Value<double?> calculatedAreaM2,
   Value<ParcelStatus> status,
+  Value<String?> imagePath,
   Value<String?> notes,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
@@ -6173,6 +6224,11 @@ class $$ParcelsTableFilterComposer
   get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get notes => $composableBuilder(
@@ -6330,6 +6386,11 @@ class $$ParcelsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get imagePath => $composableBuilder(
+    column: $table.imagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -6376,6 +6437,9 @@ class $$ParcelsTableAnnotationComposer
 
   GeneratedColumnWithTypeConverter<ParcelStatus, String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get imagePath =>
+      $composableBuilder(column: $table.imagePath, builder: (column) => column);
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
@@ -6527,6 +6591,7 @@ class $$ParcelsTableTableManager
                 Value<double?> declaredAreaM2 = const Value.absent(),
                 Value<double?> calculatedAreaM2 = const Value.absent(),
                 Value<ParcelStatus> status = const Value.absent(),
+                Value<String?> imagePath = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -6538,6 +6603,7 @@ class $$ParcelsTableTableManager
                 declaredAreaM2: declaredAreaM2,
                 calculatedAreaM2: calculatedAreaM2,
                 status: status,
+                imagePath: imagePath,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -6551,6 +6617,7 @@ class $$ParcelsTableTableManager
                 Value<double?> declaredAreaM2 = const Value.absent(),
                 Value<double?> calculatedAreaM2 = const Value.absent(),
                 required ParcelStatus status,
+                Value<String?> imagePath = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -6562,6 +6629,7 @@ class $$ParcelsTableTableManager
                 declaredAreaM2: declaredAreaM2,
                 calculatedAreaM2: calculatedAreaM2,
                 status: status,
+                imagePath: imagePath,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

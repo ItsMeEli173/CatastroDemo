@@ -244,7 +244,9 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
     super.initState();
     final variety = widget.variety;
     _name = TextEditingController(text: variety?.name ?? '');
-    _category = TextEditingController(text: variety?.category ?? '');
+    _category = TextEditingController(
+      text: (variety?.category == 'Tinta') ? 'Tinta' : 'Blanca',
+    );
     _aliases = TextEditingController(text: variety?.aliases ?? '');
     _description = TextEditingController(text: variety?.description ?? '');
     _active = variety?.active ?? true;
@@ -304,15 +306,23 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _category,
+              DropdownButtonFormField<String>(
+                initialValue: (_category.text == 'Blanca' || _category.text == 'Tinta')
+                    ? _category.text
+                    : 'Blanca',
                 decoration: const InputDecoration(
-                  labelText: 'Categoría',
-                  helperText: 'Opcional, por ejemplo Blanca o Tinta',
+                  labelText: 'Categoría *',
+                  helperText: 'Solo se permiten: Blanca o Tinta',
                 ),
-                textCapitalization: TextCapitalization.sentences,
-                validator: (value) =>
-                    Validators.optionalText(value, maxLength: 40),
+                items: const [
+                  DropdownMenuItem(value: 'Blanca', child: Text('Blanca')),
+                  DropdownMenuItem(value: 'Tinta', child: Text('Tinta')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => _category.text = val);
+                  }
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(

@@ -61,6 +61,18 @@ class DriftParcelRepository implements ParcelRepository {
   Future<int> count() => _parcelDao.count();
 
   @override
+  Future<String> nextCode() async {
+    final total = await _parcelDao.count();
+    var candidateNum = total + 1;
+    while (true) {
+      final code = 'PAR-${candidateNum.toString().padLeft(3, '0')}';
+      final existing = await _parcelDao.findByCode(code);
+      if (existing == null) return code;
+      candidateNum++;
+    }
+  }
+
+  @override
   Future<void> save(Parcel parcel) async {
     final codeError = Validators.requiredCode(
       parcel.code,
@@ -87,6 +99,7 @@ class DriftParcelRepository implements ParcelRepository {
           declaredAreaM2: Value(parcel.declaredAreaM2),
           calculatedAreaM2: Value(parcel.calculatedAreaM2),
           status: Value(parcel.status),
+          imagePath: Value(_clean(parcel.imagePath)),
           notes: Value(_clean(parcel.notes)),
           createdAt: Value(parcel.createdAt.toUtc()),
           updatedAt: Value(parcel.updatedAt.toUtc()),
@@ -126,6 +139,7 @@ class DriftParcelRepository implements ParcelRepository {
 
   @override
   Future<void> delete(String id) async {
+    final existing = await _parcelDao.findById(id);
     final photoPaths = await _parcelDao.photoRelativePathsByParcel(id);
     try {
       await _parcelDao.deleteById(id);
@@ -136,6 +150,9 @@ class DriftParcelRepository implements ParcelRepository {
     }
     for (final relativePath in photoPaths) {
       await _photoStorage.deleteRelative(relativePath);
+    }
+    if (existing?.imagePath != null) {
+      await _photoStorage.deleteRelative(existing!.imagePath!);
     }
   }
 
@@ -153,6 +170,7 @@ extension ParcelRowMapper on ParcelRow {
         declaredAreaM2: declaredAreaM2,
         calculatedAreaM2: calculatedAreaM2,
         status: status,
+        imagePath: imagePath,
         notes: notes,
         createdAt: createdAt,
         updatedAt: updatedAt,

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/di/core_providers.dart';
 import '../../../core/formatting/formatters.dart';
 import '../../../core/navigation/app_routes.dart';
 import '../../../core/widgets/async_value_view.dart';
@@ -111,7 +114,21 @@ class _ParcelTile extends ConsumerWidget {
     final theme = Theme.of(context);
     return Card(
       child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.landscape_outlined)),
+        leading: parcel.imagePath != null
+            ? FutureBuilder<File?>(
+                future: ref.read(photoStorageProvider).resolve(parcel.imagePath!),
+                builder: (context, snap) {
+                  final file = snap.data;
+                  if (file != null && file.existsSync()) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.file(file, width: 48, height: 48, fit: BoxFit.cover),
+                    );
+                  }
+                  return const CircleAvatar(child: Icon(Icons.landscape_outlined));
+                },
+              )
+            : const CircleAvatar(child: Icon(Icons.landscape_outlined)),
         title: Text(parcel.displayName),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
