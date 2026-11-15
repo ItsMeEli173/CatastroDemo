@@ -1,0 +1,25 @@
+coordenadas
+
+reales punto a
+-21.542602
+-64.725385
+
+elaboradas artificalmente
+
+-21.546205
+-64.725385
+
+-21.542602
+-64.7216123
+
+
+double calcularIncrementoMetros(double lat, double lon, double metros) {
+  // Aproximación local: 1 grado aprox 111,000 metros
+  double deltaLat = metros / 111000.0;
+  double deltaLon = metros / (111000.0 * cos(lat * pi / 180.0));
+  return deltaLat;
+}
+
+lat = 400/111000 = 0.003603
+lon = 400*(1/111000.0 * cos (-21.542602 * pi / 180.0)) = 0.0039327
+
