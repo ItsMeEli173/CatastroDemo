@@ -76,8 +76,8 @@ class DriftParcelVertexRepository implements ParcelVertexRepository {
       });
     } on AppFailure {
       rethrow;
-    } catch (_) {
-      throw const StorageFailure('No se pudo guardar la geometría.');
+    } catch (e) {
+      throw StorageFailure('No se pudo guardar la geometría: $e');
     }
     for (final relativePath in removedPhotos) {
       await _photoStorage.deleteRelative(relativePath);
