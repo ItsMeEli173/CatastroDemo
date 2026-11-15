@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -6,6 +7,7 @@ import '../../../core/di/core_providers.dart';
 import '../../../core/formatting/formatters.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../vertex_photos/data/vertex_photo_providers.dart';
 import '../../vertex_photos/presentation/vertex_photo_dialog.dart';
 import '../data/parcel_providers.dart';
 import '../domain/entities/parcel_vertex.dart';
@@ -261,11 +263,11 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
                           final vertex = vertices[index];
                           return Card(
                             child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: vertex.hasLowAccuracy
-                                    ? Theme.of(context).colorScheme.error
-                                    : null,
-                                child: Text('${index + 1}'),
+                              leading: _VertexLeading(
+                                index: index + 1,
+                                vertexId: vertex.id,
+                                hasLowAccuracy: vertex.hasLowAccuracy,
+                                onTap: () => _openPhotos(vertex),
                               ),
                               title: Text(
                                 Formatters.point(
@@ -415,6 +417,83 @@ class _ManualVertexDialogState extends State<_ManualVertexDialog> {
           child: const Text('Agregar'),
         ),
       ],
+    );
+  }
+}
+
+
+class _VertexLeading extends ConsumerWidget {
+  const _VertexLeading({
+    required this.index,
+    required this.vertexId,
+    required this.hasLowAccuracy,
+    required this.onTap,
+  });
+
+  final int index;
+  final String vertexId;
+  final bool hasLowAccuracy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photosAsync = ref.watch(vertexPhotosProvider(vertexId));
+    final defaultAvatar = CircleAvatar(
+      backgroundColor: hasLowAccuracy
+          ? Theme.of(context).colorScheme.error
+          : null,
+      child: Text('$index'),
+    );
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: photosAsync.when(
+        data: (photos) {
+          if (photos.isEmpty) return defaultAvatar;
+          final firstPhoto = photos.first;
+          return FutureBuilder<File?>(
+            future: ref.read(photoStorageProvider).resolve(firstPhoto.relativePath),
+            builder: (context, snap) {
+              final file = snap.data;
+              if (file != null && file.existsSync()) {
+                return Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        file,
+                        width: 44,
+                        height: 44,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '$index',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return defaultAvatar;
+            },
+          );
+        },
+        loading: () => defaultAvatar,
+        error: (_, _) => defaultAvatar,
+      ),
     );
   }
 }
