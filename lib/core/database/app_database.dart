@@ -44,7 +44,7 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -54,6 +54,11 @@ class AppDatabase extends _$AppDatabase {
         onCreate: (migrator) async {
           await migrator.createAll();
           await _seedCatalogs();
+        },
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.addColumn(parcels, parcels.imagePath);
+          }
         },
         beforeOpen: (details) async {
           // SQLite no aplica claves foráneas si la PRAGMA está desactivada.
