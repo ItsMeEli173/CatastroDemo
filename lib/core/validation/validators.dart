@@ -14,10 +14,23 @@ abstract final class Validators {
     return double.tryParse(normalized);
   }
 
-  /// Variante para entradas sin separador de miles (`1234,5`).
+  /// Variante para entradas con separador de miles o decimal ambiguo (`1.000,00` o `1000.00` o `1000,00`).
   static double? parsePlainDecimal(String? raw) {
     final value = raw?.trim() ?? '';
     if (value.isEmpty) return null;
+    // Si contiene punto y coma (e.g. 1.000,00 o 1,000.00)
+    if (value.contains('.') && value.contains(',')) {
+      final lastDot = value.lastIndexOf('.');
+      final lastComma = value.lastIndexOf(',');
+      if (lastDot > lastComma) {
+        // Formato 1,000.50 -> eliminar comas
+        return double.tryParse(value.replaceAll(',', ''));
+      } else {
+        // Formato 1.000,50 -> eliminar puntos y cambiar coma a punto
+        return double.tryParse(value.replaceAll('.', '').replaceAll(',', '.'));
+      }
+    }
+    // Si solo tiene coma o solo tiene punto
     return double.tryParse(value.replaceAll(',', '.'));
   }
 

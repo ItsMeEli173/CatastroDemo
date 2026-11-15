@@ -546,7 +546,7 @@ class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
     _factor = TextEditingController(
       text: unit?.kilogramsEquivalent == null
           ? ''
-          : Formatters.quantity(unit!.kilogramsEquivalent),
+          : Formatters.plainNumber(unit!.kilogramsEquivalent),
     );
     _active = unit?.active ?? true;
   }
