@@ -84,13 +84,33 @@ class LocalExportService implements ExportService {
       );
 
       var photoCount = 0;
-      for (final photo in snapshot.vertexPhotos) {
-        final file = await _photoStorage.resolve(photo.relativePath);
-        if (file == null) continue;
+      final addedPaths = <String>{};
+
+      // 1. Fotografías de las parcelas
+      for (final parcel in snapshot.parcels) {
+        final path = parcel.imagePath;
+        if (path == null || path.trim().isEmpty || addedPaths.contains(path)) continue;
+        final file = await _photoStorage.resolve(path);
+        if (file == null || !file.existsSync()) continue;
         final bytes = await file.readAsBytes();
         archive.addFile(
-          ArchiveFile(photo.relativePath, bytes.length, bytes),
+          ArchiveFile(path, bytes.length, bytes),
         );
+        addedPaths.add(path);
+        photoCount++;
+      }
+
+      // 2. Fotografías de los vértices
+      for (final photo in snapshot.vertexPhotos) {
+        final path = photo.relativePath;
+        if (addedPaths.contains(path)) continue;
+        final file = await _photoStorage.resolve(path);
+        if (file == null || !file.existsSync()) continue;
+        final bytes = await file.readAsBytes();
+        archive.addFile(
+          ArchiveFile(path, bytes.length, bytes),
+        );
+        addedPaths.add(path);
         photoCount++;
       }
 
@@ -148,6 +168,7 @@ class LocalExportService implements ExportService {
               'declaredAreaM2': row.declaredAreaM2,
               'calculatedAreaM2': row.calculatedAreaM2,
               'status': row.status.name,
+              'imagePath': row.imagePath,
               'notes': row.notes,
               'createdAt': _iso(row.createdAt),
               'updatedAt': _iso(row.updatedAt),
