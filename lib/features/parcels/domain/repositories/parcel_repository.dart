@@ -16,6 +16,9 @@ abstract interface class ParcelRepository {
 
   Future<int> count();
 
+  /// Genera el siguiente código correlativo de parcela (ej. PAR-001).
+  Future<String> nextCode();
+
   Future<void> save(Parcel parcel);
 
   /// Valida la geometría antes de activar una parcela.

@@ -73,6 +73,19 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
     _locality = TextEditingController(text: farmer?.locality ?? '');
     _address = TextEditingController(text: farmer?.address ?? '');
     _notes = TextEditingController(text: farmer?.notes ?? '');
+
+    if (farmer == null) {
+      _loadNextCode();
+    }
+  }
+
+  Future<void> _loadNextCode() async {
+    final code = await ref.read(farmerRepositoryProvider).nextCode();
+    if (mounted && _document.text.isEmpty) {
+      setState(() {
+        _document.text = code;
+      });
+    }
   }
 
   @override
@@ -159,7 +172,8 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
                   TextFormField(
                     controller: _document,
                     decoration: const InputDecoration(
-                      labelText: 'Documento de identidad',
+                      labelText: 'Código / Documento *',
+                      helperText: 'Código correlativo autogenerado',
                     ),
                     textCapitalization: TextCapitalization.characters,
                   ),
