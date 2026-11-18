@@ -90,7 +90,7 @@ Escenarios: alta de agricultor; alta de parcela con propietarios; delimitación 
 - RN-28 Nombre único `photo_<uuid>.<ext>`; ruta relativa `photos/<nombre>` en SQLite; nunca rutas absolutas.
 - RN-29 El archivo inexistente o dañado se muestra como no disponible y no bloquea el vértice ni la parcela.
 - RN-30 Eliminar un vértice elimina sus fotografías tras confirmación; los archivos huérfanos se detectan y depuran desde mantenimiento.
-- RN-31 La interfaz de la demo muestra una fotografía por vértice; el modelo admite varias.
+- RN-31 Cada vértice admite a lo sumo una fotografía (0 o 1); el esquema lo impone con un índice único sobre `vertex_photos.vertex_id`. Agregar una nueva reemplaza a la anterior: se elimina el registro y el archivo viejos, y se guarda la nueva.
 - RN-32 Al guardarla, la fotografía se recodifica como JPEG (calidad 80, lado mayor 1600 px) para reducir su peso; si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
 - RN-33 La fotografía se muestra como botón en el detalle de parcela, el formulario y el diálogo del vértice; al tocar se abre un visor a pantalla completa con zoom. En el formulario el visor es de solo lectura.
 - RN-34 Desde el visor se puede eliminar la fotografía en el detalle de parcela y en el diálogo del vértice, previa confirmación: primero se elimina el registro y luego el archivo. «Quitar foto» en el formulario también elimina el archivo del almacenamiento privado.
@@ -106,14 +106,14 @@ Escenarios: alta de agricultor; alta de parcela con propietarios; delimitación 
 
 ```text
 farmers 1 ──< parcel_owners >── 1 parcels
-parcels 1 ──< parcel_vertices 1 ──< vertex_photos
+parcels 1 ──< parcel_vertices 1 ──0..1 vertex_photos
 parcels 1 ──< parcel_varieties >── 1 grape_varieties
 parcels 1 ──< production_estimates >── 1 harvest_seasons
 production_estimates >── 1 measurement_units
 production_estimates >── 0..1 grape_varieties
 ```
 
-Cardinalidades: agricultor N:M parcela (resuelta por `parcel_owners`); parcela 1:N vértices ordenados; vértice 1:N fotografías; parcela N:M variedad (resuelta por `parcel_varieties`); parcela 1:N estimaciones; temporada 1:N estimaciones; unidad 1:N estimaciones.
+Cardinalidades: agricultor N:M parcela (resuelta por `parcel_owners`); parcela 1:N vértices ordenados; vértice 1:0..1 fotografía; parcela N:M variedad (resuelta por `parcel_varieties`); parcela 1:N estimaciones; temporada 1:N estimaciones; unidad 1:N estimaciones.
 
 ## 6. Flujos de navegación
 
