@@ -5,14 +5,15 @@ import 'package:catastrodemo/features/production/data/drift_production_repositor
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Migración v2 → v3 con datos reales.
+/// Migración v2 → v4 con datos reales.
 ///
 /// El esquema v2 se escribe a mano y se marca con `PRAGMA user_version = 2`
 /// dentro del callback `setup`, que Drift ejecuta antes de leer la versión. Así
-/// la apertura dispara `onUpgrade(2, 3)` y el relleno de códigos se prueba
-/// contra filas concretas, no contra un esquema recién creado.
+/// la apertura dispara `onUpgrade(2, 4)`: el relleno de códigos de la versión 3
+/// se prueba contra filas concretas y, sobre el mismo paso, la depuración de
+/// fotografías de la versión 4.
 void main() {
-  group('Migración v2 → v3', () {
+  group('Migración v2 → v4', () {
     late AppDatabase db;
 
     setUp(() async {
@@ -65,6 +66,48 @@ void main() {
               active INTEGER NOT NULL,
               created_at INTEGER NOT NULL,
               updated_at INTEGER NOT NULL
+            )
+          ''');
+          // La base v2 ya tenía geometría y fotografías de vértices; la
+          // migración a v4 depura duplicados y crea el índice único sobre
+          // `vertex_photos`.
+          raw.execute('''
+            CREATE TABLE parcels (
+              id TEXT NOT NULL PRIMARY KEY,
+              code TEXT NOT NULL,
+              name TEXT,
+              declared_area_m2 REAL,
+              calculated_area_m2 REAL,
+              status TEXT NOT NULL,
+              image_path TEXT,
+              notes TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE parcel_vertices (
+              id TEXT NOT NULL PRIMARY KEY,
+              parcel_id TEXT NOT NULL REFERENCES parcels (id) ON DELETE CASCADE,
+              sequence_number INTEGER NOT NULL,
+              latitude REAL NOT NULL,
+              longitude REAL NOT NULL,
+              accuracy_m REAL,
+              capture_method TEXT NOT NULL,
+              captured_at INTEGER,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE vertex_photos (
+              id TEXT NOT NULL PRIMARY KEY,
+              vertex_id TEXT NOT NULL
+                REFERENCES parcel_vertices (id) ON DELETE CASCADE,
+              relative_path TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              description TEXT,
+              created_at INTEGER NOT NULL
             )
           ''');
 
@@ -125,9 +168,9 @@ void main() {
       await db.close();
     });
 
-    test('sube la versión del esquema a 3', () async {
+    test('sube la versión del esquema a 4', () async {
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 3);
+      expect(row.read<int>('user_version'), 4);
     });
 
     test('conserva la cantidad de filas de cada tabla', () async {
@@ -226,6 +269,145 @@ void main() {
         db.customStatement(
           "INSERT INTO farmers (id, code, first_name, last_name, created_at, "
           "updated_at) VALUES ('f9','AGR-001','Otro','Apellido',9,9)",
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  /// Migración v3 → v4 con datos reales.
+  ///
+  /// El esquema v3 se escribe a mano con el índice **no** único sobre
+  /// `vertex_photos.vertex_id` y se marca con `PRAGMA user_version = 3`. Al
+  /// abrir, Drift dispara `onUpgrade(3, 4)`: depura los duplicados históricos y
+  /// recién después reemplaza el índice por uno único.
+  group('Migración v3 → v4', () {
+    late AppDatabase db;
+
+    setUp(() async {
+      db = AppDatabase(
+        NativeDatabase.memory(setup: (raw) {
+          raw.execute('''
+            CREATE TABLE parcels (
+              id TEXT NOT NULL PRIMARY KEY,
+              code TEXT NOT NULL,
+              name TEXT,
+              declared_area_m2 REAL,
+              calculated_area_m2 REAL,
+              status TEXT NOT NULL,
+              image_path TEXT,
+              notes TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE parcel_vertices (
+              id TEXT NOT NULL PRIMARY KEY,
+              parcel_id TEXT NOT NULL REFERENCES parcels (id) ON DELETE CASCADE,
+              sequence_number INTEGER NOT NULL,
+              latitude REAL NOT NULL,
+              longitude REAL NOT NULL,
+              accuracy_m REAL,
+              capture_method TEXT NOT NULL,
+              captured_at INTEGER,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE vertex_photos (
+              id TEXT NOT NULL PRIMARY KEY,
+              vertex_id TEXT NOT NULL
+                REFERENCES parcel_vertices (id) ON DELETE CASCADE,
+              relative_path TEXT NOT NULL,
+              file_name TEXT NOT NULL,
+              description TEXT,
+              created_at INTEGER NOT NULL
+            )
+          ''');
+          // En v3 el índice no era único; la migración debe reemplazarlo.
+          raw.execute(
+            'CREATE INDEX idx_vertex_photos_vertex ON vertex_photos (vertex_id)',
+          );
+
+          raw.execute(
+            "INSERT INTO parcels VALUES ('pa1','PAR-001',NULL,NULL,NULL,"
+            "'active',NULL,NULL,1,1)",
+          );
+          raw.execute(
+            "INSERT INTO parcel_vertices VALUES ('v1','pa1',0,-34.0,-58.0,NULL,"
+            "'gps',NULL,1,1)",
+          );
+          raw.execute(
+            "INSERT INTO parcel_vertices VALUES ('v2','pa1',1,-34.1,-58.1,NULL,"
+            "'gps',NULL,2,2)",
+          );
+
+          // v1 acumuló tres fotos: la más antigua es la que la interfaz ya
+          // mostraba (`findByVertex` ordena por `created_at` ASC).
+          raw.execute(
+            "INSERT INTO vertex_photos VALUES ('p1','v1','photos/a.png',"
+            "'a.png',NULL,10)",
+          );
+          raw.execute(
+            "INSERT INTO vertex_photos VALUES ('p2','v1','photos/b.png',"
+            "'b.png',NULL,20)",
+          );
+          raw.execute(
+            "INSERT INTO vertex_photos VALUES ('p3','v1','photos/c.png',"
+            "'c.png',NULL,30)",
+          );
+          raw.execute(
+            "INSERT INTO vertex_photos VALUES ('p4','v2','photos/d.png',"
+            "'d.png',NULL,5)",
+          );
+
+          raw.execute('PRAGMA user_version = 3');
+        }),
+      );
+      // La primera consulta dispara la apertura y, con ella, la migración.
+      await db.customSelect('SELECT 1').get();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('sube la versión del esquema a 4', () async {
+      final row = await db.customSelect('PRAGMA user_version').getSingle();
+      expect(row.read<int>('user_version'), 4);
+    });
+
+    test('deja una sola foto por vértice y conserva la más antigua', () async {
+      final rows = await db
+          .customSelect('SELECT id, vertex_id FROM vertex_photos')
+          .get();
+      expect(
+        {
+          for (final row in rows)
+            row.read<String>('vertex_id'): row.read<String>('id'),
+        },
+        {'v1': 'p1', 'v2': 'p4'},
+      );
+    });
+
+    test('reemplaza el índice por uno único', () async {
+      final row = await db
+          .customSelect(
+            "SELECT sql FROM sqlite_master WHERE type = 'index' "
+            "AND name = 'idx_vertex_photos_vertex'",
+          )
+          .getSingle();
+      expect(row.read<String>('sql'), contains('UNIQUE'));
+    });
+
+    test('el índice único rechaza una segunda foto del mismo vértice',
+        () async {
+      await expectLater(
+        db.customStatement(
+          "INSERT INTO vertex_photos VALUES ('p9','v1','photos/z.png',"
+          "'z.png',NULL,99)",
         ),
         throwsA(isA<Exception>()),
       );

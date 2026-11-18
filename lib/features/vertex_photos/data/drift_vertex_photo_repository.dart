@@ -54,17 +54,26 @@ class DriftVertexPhotoRepository implements VertexPhotoRepository {
       description: description,
       createdAt: DateTime.now().toUtc(),
     );
+    // Un vértice tiene a lo sumo una fotografía: la nueva reemplaza a la
+    // anterior. La sustitución del registro es atómica; los archivos viejos se
+    // borran después, cuando el registro nuevo ya está a salvo.
+    final replaced = await _dao.findByVertex(vertexId);
     try {
-      await _dao.insert(
-        VertexPhotosCompanion(
-          id: Value(photo.id),
-          vertexId: Value(photo.vertexId),
-          relativePath: Value(photo.relativePath),
-          fileName: Value(photo.fileName),
-          description: Value(photo.description),
-          createdAt: Value(photo.createdAt),
-        ),
-      );
+      await _dao.transaction(() async {
+        for (final previous in replaced) {
+          await _dao.deleteById(previous.id);
+        }
+        await _dao.insert(
+          VertexPhotosCompanion(
+            id: Value(photo.id),
+            vertexId: Value(photo.vertexId),
+            relativePath: Value(photo.relativePath),
+            fileName: Value(photo.fileName),
+            description: Value(photo.description),
+            createdAt: Value(photo.createdAt),
+          ),
+        );
+      });
     } on AppFailure {
       await _storage.deleteRelative(relativePath);
       rethrow;
@@ -72,6 +81,9 @@ class DriftVertexPhotoRepository implements VertexPhotoRepository {
       // El archivo copiado no debe quedar huérfano si falla el registro.
       await _storage.deleteRelative(relativePath);
       throw const StorageFailure('No se pudo registrar la fotografía.');
+    }
+    for (final previous in replaced) {
+      await _storage.deleteRelative(previous.relativePath);
     }
     return photo;
   }

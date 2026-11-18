@@ -2665,6 +2665,8 @@ class $VertexPhotosTable extends VertexPhotos
 
 class VertexPhotoRow extends DataClass implements Insertable<VertexPhotoRow> {
   final String id;
+
+  /// Cada vértice tiene a lo sumo una fotografía; el índice único lo impone.
   final String vertexId;
   final String relativePath;
   final String fileName;
@@ -5763,7 +5765,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final Index idxVertexPhotosVertex = Index(
     'idx_vertex_photos_vertex',
-    'CREATE INDEX idx_vertex_photos_vertex ON vertex_photos (vertex_id)',
+    'CREATE UNIQUE INDEX idx_vertex_photos_vertex ON vertex_photos (vertex_id)',
   );
   late final Index idxGrapeVarietiesActive = Index(
     'idx_grape_varieties_active',
