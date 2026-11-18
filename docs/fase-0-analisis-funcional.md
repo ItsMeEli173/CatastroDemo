@@ -90,12 +90,13 @@ Escenarios: alta de agricultor; alta de parcela con propietarios; delimitación 
 - RN-28 El archivo inexistente o dañado se muestra como no disponible y no bloquea el vértice ni la parcela.
 - RN-29 Eliminar un vértice elimina sus fotografías tras confirmación; los archivos huérfanos se detectan y depuran desde mantenimiento.
 - RN-30 La interfaz de la demo muestra una fotografía por vértice; el modelo admite varias.
+- RN-31 Al guardarla, la fotografía se recodifica como JPEG (calidad 80, lado mayor 1600 px) para reducir su peso; si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
 
 **Exportación**
-- RN-31 JSON con `schema_version` `1.0`, `app_name`, `exported_at` UTC ISO 8601 y arreglos de todas las entidades.
-- RN-32 La lectura se ejecuta en una transacción consistente; no muta datos.
-- RN-33 ZIP `CatastroDemo_backup_YYYYMMDD.zip` con `manifest.json`, `data.json` y `photos/` disponibles.
-- RN-34 Sin credenciales, secretos ni rutas absolutas.
+- RN-32 JSON con `schema_version` `1.0`, `app_name`, `exported_at` UTC ISO 8601 y arreglos de todas las entidades.
+- RN-33 La lectura se ejecuta en una transacción consistente; no muta datos.
+- RN-34 ZIP `CatastroDemo_backup_YYYYMMDD.zip` con `manifest.json`, `data.json` y `photos/` disponibles.
+- RN-35 Sin credenciales, secretos ni rutas absolutas.
 
 ## 5. Modelo entidad-relación conceptual
 

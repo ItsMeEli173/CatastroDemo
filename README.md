@@ -48,7 +48,7 @@ Diseñada y optimizada para operar de manera autónoma en campo sobre dispositiv
 - **Base de Datos:** SQLite embebido con claves foráneas activas (`PRAGMA foreign_keys = ON`)
 - **Geolocalización:** [geolocator](https://pub.dev/packages/geolocator) (servicios GPS de alta precisión)
 - **Mapas y Renderizado Geo:** [flutter_map](https://pub.dev/packages/flutter_map) + [latlong2](https://pub.dev/packages/latlong2)
-- **Manejo de Imágenes:** [image_picker](https://pub.dev/packages/image_picker) + almacenamiento privado en sandbox
+- **Manejo de Imágenes:** [image_picker](https://pub.dev/packages/image_picker) + almacenamiento privado en sandbox, con recodificación a JPEG al guardar mediante [image](https://pub.dev/packages/image) (calidad 80, lado mayor 1600 px)
 - **Compresión y Exportación:** [archive](https://pub.dev/packages/archive) (generación de ZIP y JSON estructurados)
 - **Compartición de Archivos:** [share_plus](https://pub.dev/packages/share_plus)
 - **Generación de Código:** `build_runner`, `drift_dev`
@@ -197,7 +197,7 @@ erDiagram
 ### 2. Catastro de Parcelas
 - **Código de Registro de Solo Lectura:** Correlativo autogenerado con formato `PAR-001`, `PAR-002`; el usuario lo ve pero no lo edita.
 - **Asociación Restringida a Agricultores:** No se permiten campos abiertos; se selecciona obligatoriamente de la lista existente de agricultores registrados.
-- **Fotografía de la Parcela:** Captura desde cámara o galería, almacenada de forma segura en la sandbox privada de la app.
+- **Fotografía de la Parcela:** Captura desde cámara o galería, almacenada de forma segura en la sandbox privada de la app. Antes de escribirse, la imagen se recodifica como JPEG (calidad 80, lado mayor 1600 px); si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
 - **Unidad de Superficie Declarada:** Entrada en $m^2$ o $ha$ mediante un toggle interactivo (`SegmentedButton`) que recalcula y muestra la equivalencia en vivo.
 
 ### 3. Vértices y Geometría en Tiempo Real
@@ -297,12 +297,17 @@ El proyecto cuenta con verificación continua de sintaxis y suite de pruebas aut
   - `schema_migration_test.dart`: Migración real v2 → v3 (columnas, relleno de datos, índices únicos y rechazo de duplicados).
   - `measurement_unit_test.dart`: Abreviatura visible de la unidad con caída al código cuando falta.
   - `export_payload_test.dart`: El respaldo JSON incluye el código de registro y la abreviatura.
+  - `photo_compressor_test.dart`: Reducción del lado mayor, salida JPEG, respeto del tamaño en imágenes chicas y `null` ante bytes que no son una imagen.
+  - `photo_storage_test.dart`: La foto se guarda comprimida, y se conserva el original cuando el archivo no es una imagen o cuando comprimir no reduce el peso.
   - `parcel_services_test.dart`: Algoritmos de cálculo de área esférica y validación geométrica de polígonos.
   - `production_math_test.dart`: Cálculos de rendimiento y factores de conversión de cosecha.
   - `widget_test.dart`: Verificación de renderizado inicial de la interfaz.
 
   Pruebas de widget en `test/widget/`:
   - `farmer_form_test.dart`: El campo `Código` es de solo lectura y el campo `Documento` sigue editable.
+
+  Sondas de verificación independiente en `test/probe/`:
+  - `image_compression_probe_test.dart`: Sondas derivadas de las specs de compresión de imágenes por un verificador independiente: límites de escala, invariantes de no pérdida y preservación del comportamiento previo.
 
 ---
 

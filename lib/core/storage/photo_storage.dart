@@ -5,17 +5,22 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../errors/app_failure.dart';
+import '../media/photo_compressor.dart';
 
 /// Almacenamiento privado de fotografías.
 ///
 /// Los binarios viven bajo `<documentos>/photos`; en SQLite solo se guarda la
 /// ruta relativa (`photos/<archivo>`), nunca una ruta absoluta.
 class PhotoStorage {
-  PhotoStorage({Future<Directory> Function()? documentsDirectoryProvider})
-      : _documentsDirectoryProvider =
-            documentsDirectoryProvider ?? getApplicationDocumentsDirectory;
+  PhotoStorage({
+    Future<Directory> Function()? documentsDirectoryProvider,
+    PhotoCompressor? compressor,
+  })  : _documentsDirectoryProvider =
+            documentsDirectoryProvider ?? getApplicationDocumentsDirectory,
+        _compressor = compressor ?? const PhotoCompressor();
 
   final Future<Directory> Function() _documentsDirectoryProvider;
+  final PhotoCompressor _compressor;
   Directory? _cachedDirectory;
 
   static const String folderName = 'photos';
@@ -39,17 +44,32 @@ class PhotoStorage {
     }
   }
 
-  /// Copia un archivo externo al almacenamiento privado y devuelve su ruta
-  /// relativa, o `null` si el origen no existe.
+  /// Comprime el archivo y lo copia al almacenamiento privado, devolviendo su
+  /// ruta relativa. Devuelve `null` si el origen no existe.
+  ///
+  /// Es el único punto por el que entran fotografías al sandbox, así que la
+  /// compresión vale para todos los flujos (parcelas y vértices).
+  ///
+  /// Nunca se descarta la foto original: si no se puede decodificar, o si el
+  /// resultado comprimido no es más liviano, se guarda el archivo tal cual.
   Future<String?> copyFrom(String sourcePath) async {
     final source = File(sourcePath);
     if (!await source.exists()) return null;
     try {
       final directory = await photosDirectory();
+      final originalBytes = await source.readAsBytes();
+      final compressed = await _compressor.compress(originalBytes);
+      final keepCompressed =
+          compressed != null && compressed.length < originalBytes.length;
+
       final rawExtension = p.extension(sourcePath).toLowerCase();
-      final extension = rawExtension.isEmpty ? '.jpg' : rawExtension;
+      final fallbackExtension = rawExtension.isEmpty ? '.jpg' : rawExtension;
+      final extension = keepCompressed ? '.jpg' : fallbackExtension;
       final fileName = 'photo_${const Uuid().v4()}$extension';
-      await source.copy(p.join(directory.path, fileName));
+      await File(p.join(directory.path, fileName)).writeAsBytes(
+        keepCompressed ? compressed : originalBytes,
+        flush: true,
+      );
       return '$folderName/$fileName';
     } on AppFailure {
       rethrow;
