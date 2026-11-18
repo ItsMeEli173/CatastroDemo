@@ -6,6 +6,12 @@ abstract final class Validators {
   static final RegExp _email = RegExp(r'^[\w.+-]+@[\w-]+(\.[\w-]+)+$');
   static final RegExp _phone = RegExp(r'^[0-9+()\s-]{6,25}$');
 
+  /// Nombre de persona: letras (con acentos, diéresis y Ñ) y espacios simples
+  /// entre palabras. Sin dígitos, símbolos ni emojis.
+  static final RegExp _personName = RegExp(
+    r'^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?: [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$',
+  );
+
   /// Convierte `1.234,5` o `1234.5` a número; devuelve null si no es numérico.
   static double? parseDecimal(String? raw) {
     final value = raw?.trim() ?? '';
@@ -62,6 +68,35 @@ abstract final class Validators {
     if (text.length > maxLength) return 'Máximo $maxLength caracteres.';
     return null;
   }
+
+  /// Recorta los extremos y colapsa cualquier espacio interno repetido.
+  ///
+  /// Se aplica antes de validar y antes de guardar, de modo que un nombre
+  /// escrito como `"  Juan   Carlos "` termine persistido como `"Juan Carlos"`.
+  static String normalizePersonName(String? raw) =>
+      (raw ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+
+  /// Nombre o apellido de persona: solo letras y espacios simples.
+  ///
+  /// Normaliza primero, así que un valor con espacios sobrantes no se rechaza:
+  /// se corrige. Los valores no vacíos con dígitos, símbolos o emojis sí se
+  /// rechazan.
+  static String? requiredName(
+    String? value, {
+    required String message,
+    int maxLength = 120,
+  }) {
+    final text = normalizePersonName(value);
+    if (text.isEmpty) return message;
+    if (text.length > maxLength) return 'Máximo $maxLength caracteres.';
+    if (!_personName.hasMatch(text)) {
+      return 'Solo se permiten letras y espacios.';
+    }
+    return null;
+  }
+
+  static bool isValidPersonName(String value) =>
+      _personName.hasMatch(normalizePersonName(value));
 
   static String? optionalEmail(String? value) {
     final text = value?.trim() ?? '';

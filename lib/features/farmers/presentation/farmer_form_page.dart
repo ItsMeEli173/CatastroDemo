@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/validation/person_name_input_formatter.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/section_card.dart';
@@ -112,8 +113,8 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
     final existing = widget.farmer;
     final farmer = Farmer(
       id: existing?.id ?? const Uuid().v4(),
-      firstName: _firstName.text.trim(),
-      lastName: _lastName.text.trim(),
+      firstName: Validators.normalizePersonName(_firstName.text),
+      lastName: Validators.normalizePersonName(_lastName.text),
       documentNumber: _document.text,
       phone: _phone.text,
       email: _email.text,
@@ -153,7 +154,8 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
                     controller: _firstName,
                     decoration: const InputDecoration(labelText: 'Nombre *'),
                     textCapitalization: TextCapitalization.words,
-                    validator: (value) => Validators.requiredText(
+                    inputFormatters: const [PersonNameInputFormatter()],
+                    validator: (value) => Validators.requiredName(
                       value,
                       message: 'Ingresa el nombre.',
                     ),
@@ -163,7 +165,8 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
                     controller: _lastName,
                     decoration: const InputDecoration(labelText: 'Apellido *'),
                     textCapitalization: TextCapitalization.words,
-                    validator: (value) => Validators.requiredText(
+                    inputFormatters: const [PersonNameInputFormatter()],
+                    validator: (value) => Validators.requiredName(
                       value,
                       message: 'Ingresa el apellido.',
                     ),

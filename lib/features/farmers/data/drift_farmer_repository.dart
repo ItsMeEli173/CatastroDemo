@@ -49,12 +49,12 @@ class DriftFarmerRepository implements FarmerRepository {
 
   @override
   Future<void> save(Farmer farmer) async {
-    final firstNameError = Validators.requiredText(
+    final firstNameError = Validators.requiredName(
       farmer.firstName,
       message: 'Ingresa el nombre.',
     );
     if (firstNameError != null) throw ValidationFailure(firstNameError);
-    final lastNameError = Validators.requiredText(
+    final lastNameError = Validators.requiredName(
       farmer.lastName,
       message: 'Ingresa el apellido.',
     );
@@ -68,8 +68,8 @@ class DriftFarmerRepository implements FarmerRepository {
       await _dao.upsert(
         FarmersCompanion(
           id: Value(farmer.id),
-          firstName: Value(farmer.firstName.trim()),
-          lastName: Value(farmer.lastName.trim()),
+          firstName: Value(Validators.normalizePersonName(farmer.firstName)),
+          lastName: Value(Validators.normalizePersonName(farmer.lastName)),
           documentNumber: Value(_clean(farmer.documentNumber)),
           phone: Value(_clean(farmer.phone)),
           email: Value(_clean(farmer.email)),
