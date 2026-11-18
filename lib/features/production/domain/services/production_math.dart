@@ -1,6 +1,6 @@
 import '../../../../core/errors/app_failure.dart';
 
-/// Conversión de cantidades registradas a kilogramos (RN-22 y RN-23).
+/// Conversión de cantidades registradas a kilogramos (RN-23 y RN-24).
 abstract final class ProductionMath {
   /// `kilogramos_estimados = cantidad_original × factor_conversion_kg`.
   static double estimatedKg({

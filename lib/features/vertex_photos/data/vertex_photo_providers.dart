@@ -10,6 +10,7 @@ final vertexPhotoRepositoryProvider = Provider<VertexPhotoRepository>(
   (ref) => DriftVertexPhotoRepository(
     ref.watch(appDatabaseProvider).vertexPhotoDao,
     ref.watch(photoStorageProvider),
+    ref.watch(appDatabaseProvider).parcelDao,
   ),
 );
 
