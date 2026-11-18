@@ -179,6 +179,23 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
     );
   }
 
+  /// Quita la fotografía del formulario.
+  ///
+  /// Si la foto ya estaba persistida, además de limpiar la referencia en
+  /// memoria se elimina el archivo del almacenamiento privado. La imagen recién
+  /// elegida y todavía no copiada no vive en el almacenamiento privado, así que
+  /// no se toca.
+  Future<void> _removePhoto() async {
+    final path = _imagePath;
+    setState(() {
+      _tempPickedImageSource = null;
+      _imagePath = null;
+    });
+    if (path != null) {
+      await ref.read(photoStorageProvider).deleteRelative(path);
+    }
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_selectedFarmerId == null) {
@@ -500,12 +517,7 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
                         IconButton.outlined(
                           tooltip: 'Quitar foto',
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              _tempPickedImageSource = null;
-                              _imagePath = null;
-                            });
-                          },
+                          onPressed: _removePhoto,
                         ),
                       ],
                     ],

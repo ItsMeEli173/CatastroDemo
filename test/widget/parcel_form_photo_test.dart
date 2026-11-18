@@ -98,4 +98,18 @@ void main() {
 
     await unmount(tester);
   });
+
+  testWidgets('S9 «Quitar foto» elimina el archivo del almacenamiento',
+      (tester) async {
+    await tester.runAsync(() => seedParcel());
+    await pumpForm(tester);
+
+    await tester.tap(find.byTooltip('Quitar foto'));
+    await tester.pumpAndSettle();
+
+    expect(storage.deleted, contains(_photoPath));
+    expect(find.byType(PhotoButton), findsNothing);
+
+    await unmount(tester);
+  });
 }
