@@ -58,17 +58,6 @@ abstract final class Validators {
     return null;
   }
 
-  static String? requiredCode(
-    String? value, {
-    required String message,
-    int maxLength = 40,
-  }) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return message;
-    if (text.length > maxLength) return 'Máximo $maxLength caracteres.';
-    return null;
-  }
-
   /// Recorta los extremos y colapsa cualquier espacio interno repetido.
   ///
   /// Se aplica antes de validar y antes de guardar, de modo que un nombre

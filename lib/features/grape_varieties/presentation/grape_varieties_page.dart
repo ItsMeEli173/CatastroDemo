@@ -113,6 +113,7 @@ class _VarietyTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final details = [
+      if (variety.code != null) variety.code!,
       if (variety.category != null) variety.category!,
       if (variety.aliases != null) 'Alias: ${variety.aliases}',
     ].join(' · ');
@@ -180,6 +181,7 @@ class _VarietyTile extends ConsumerWidget {
       () => ref.read(grapeVarietyRepositoryProvider).save(
             GrapeVariety(
               id: variety.id,
+              code: variety.code,
               name: variety.name,
               category: variety.category,
               description: variety.description,
@@ -232,6 +234,7 @@ class _VarietyFormDialog extends ConsumerStatefulWidget {
 
 class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _code;
   late final TextEditingController _name;
   late final TextEditingController _category;
   late final TextEditingController _aliases;
@@ -243,6 +246,7 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
   void initState() {
     super.initState();
     final variety = widget.variety;
+    _code = TextEditingController(text: variety?.code ?? '');
     _name = TextEditingController(text: variety?.name ?? '');
     _category = TextEditingController(
       text: (variety?.category == 'Tinta') ? 'Tinta' : 'Blanca',
@@ -250,10 +254,19 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
     _aliases = TextEditingController(text: variety?.aliases ?? '');
     _description = TextEditingController(text: variety?.description ?? '');
     _active = variety?.active ?? true;
+    if (variety == null) _loadNextCode();
+  }
+
+  Future<void> _loadNextCode() async {
+    final code = await ref.read(grapeVarietyRepositoryProvider).nextCode();
+    if (mounted && _code.text.isEmpty) {
+      setState(() => _code.text = code);
+    }
   }
 
   @override
   void dispose() {
+    _code.dispose();
     _name.dispose();
     _category.dispose();
     _aliases.dispose();
@@ -268,6 +281,7 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
     final existing = widget.variety;
     final variety = GrapeVariety(
       id: existing?.id ?? const Uuid().v4(),
+      code: _code.text.trim(),
       name: _name.text.trim(),
       category: _category.text,
       description: _description.text,
@@ -295,6 +309,17 @@ class _VarietyFormDialogState extends ConsumerState<_VarietyFormDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TextFormField(
+                controller: _code,
+                readOnly: true,
+                canRequestFocus: false,
+                decoration: const InputDecoration(
+                  labelText: 'Código',
+                  helperText: 'COD · asignado por el sistema',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _name,
                 decoration: const InputDecoration(labelText: 'Nombre'),

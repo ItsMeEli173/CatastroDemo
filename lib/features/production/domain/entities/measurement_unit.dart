@@ -28,4 +28,11 @@ class MeasurementUnit {
   final DateTime updatedAt;
 
   bool get hasFixedFactor => kilogramsEquivalent != null;
+
+  /// Abreviatura visible; cae al código cuando falta (filas anteriores a la
+  /// migración v3).
+  String get displayAbbreviation {
+    final value = abbreviation?.trim() ?? '';
+    return value.isEmpty ? code : value;
+  }
 }
