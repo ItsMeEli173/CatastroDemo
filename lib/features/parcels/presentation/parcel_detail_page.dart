@@ -10,6 +10,8 @@ import '../../../core/navigation/app_routes.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/async_value_view.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/photo_button.dart';
+import '../../../core/widgets/photo_viewer.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../farmers/data/farmer_providers.dart';
 import '../../farmers/domain/entities/farmer.dart';
@@ -74,6 +76,45 @@ class _ParcelBody extends ConsumerWidget {
 
   final Parcel parcel;
 
+  /// Abre la fotografía de la parcela a pantalla completa.
+  ///
+  /// El visor permite eliminarla: el borrado quita la referencia de la parcela
+  /// y el archivo del almacenamiento privado.
+  Future<void> _openPhoto(BuildContext context, WidgetRef ref, File file) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PhotoViewer(
+          file: file,
+          title: 'Fotografía de la parcela',
+          onDelete: () => _deletePhoto(ref),
+        ),
+      ),
+    );
+  }
+
+  /// Quita la fotografía: primero la referencia y luego el archivo.
+  Future<void> _deletePhoto(WidgetRef ref) async {
+    final path = parcel.imagePath;
+    await ref.read(parcelRepositoryProvider).save(
+          Parcel(
+            id: parcel.id,
+            code: parcel.code,
+            name: parcel.name,
+            declaredAreaM2: parcel.declaredAreaM2,
+            calculatedAreaM2: parcel.calculatedAreaM2,
+            status: parcel.status,
+            imagePath: null,
+            notes: parcel.notes,
+            createdAt: parcel.createdAt,
+            updatedAt: DateTime.now().toUtc(),
+          ),
+        );
+    if (path != null) {
+      await ref.read(photoStorageProvider).deleteRelative(path);
+    }
+    ref.invalidate(parcelProvider(parcel.id));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final vertices = ref.watch(parcelVerticesProvider(parcel.id));
@@ -103,14 +144,11 @@ class _ParcelBody extends ConsumerWidget {
                     if (file != null && file.existsSync()) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            file,
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                        child: PhotoButton(
+                          file: file,
+                          height: 200,
+                          width: double.infinity,
+                          onTap: () => _openPhoto(context, ref, file),
                         ),
                       );
                     }
