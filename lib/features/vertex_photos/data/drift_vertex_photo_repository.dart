@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/daos/parcel_dao.dart';
 import '../../../../core/database/daos/vertex_photo_dao.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/storage/photo_storage.dart';
@@ -11,10 +12,11 @@ import '../domain/repositories/vertex_photo_repository.dart';
 
 /// Metadatos de fotografías sobre Drift y binarios en almacenamiento privado.
 class DriftVertexPhotoRepository implements VertexPhotoRepository {
-  DriftVertexPhotoRepository(this._dao, this._storage);
+  DriftVertexPhotoRepository(this._dao, this._storage, this._parcelDao);
 
   final VertexPhotoDao _dao;
   final PhotoStorage _storage;
+  final ParcelDao _parcelDao;
 
   @override
   Future<List<VertexPhoto>> findByVertex(String vertexId) async =>
@@ -100,7 +102,12 @@ class DriftVertexPhotoRepository implements VertexPhotoRepository {
 
   @override
   Future<int> cleanOrphans() async {
-    final known = await _dao.allRelativePaths();
+    // Las fotos de parcela también viven en el mismo almacenamiento privado:
+    // si no se declaran como conocidas, la depuración las borraría.
+    final known = <String>[
+      ...await _dao.allRelativePaths(),
+      ...await _parcelDao.allImagePaths(),
+    ];
     return _storage.cleanOrphans(known);
   }
 }
