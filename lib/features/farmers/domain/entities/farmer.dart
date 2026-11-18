@@ -6,6 +6,7 @@ class Farmer {
     required this.lastName,
     required this.createdAt,
     required this.updatedAt,
+    this.code,
     this.documentNumber,
     this.phone,
     this.email,
@@ -15,8 +16,13 @@ class Farmer {
   });
 
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`AGR-###`).
+  final String? code;
   final String firstName;
   final String lastName;
+
+  /// Documento o CI de la persona; opcional y sin relación con [code].
   final String? documentNumber;
   final String? phone;
   final String? email;
@@ -31,6 +37,7 @@ class Farmer {
   String get searchableText => [
         firstName,
         lastName,
+        code ?? '',
         documentNumber ?? '',
         locality ?? '',
         phone ?? '',

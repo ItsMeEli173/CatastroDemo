@@ -30,7 +30,7 @@ Diseñada y optimizada para operar de manera autónoma en campo sobre dispositiv
 ## Visión General
 
 **CatastroDemo** resuelve el problema de registro y validación catastral agrícola en zonas rurales sin conectividad a Internet. Proporciona:
-- Códigos correlativos autogenerados (`AGR-001`, `PAR-001`).
+- Códigos correlativos autogenerados y de solo lectura en las cinco entidades (`AGR-001`, `PAR-001`, `UVA-001`, `UNI-001`, `TEM-001`).
 - Mapeo de polígonos mediante captura GPS de alta precisión y/o adición manual de coordenadas.
 - Cálculo de área geodésica instantáneo por excedente esférico en WGS84.
 - Manejo de superficie base en metros cuadrados ($m^2$) con conversión interactiva a hectáreas ($ha$).
@@ -139,9 +139,10 @@ erDiagram
 
     FARMERS {
         text id PK
-        text document_number UK
+        text code UK
         text first_name
         text last_name
+        text document_number
         text phone
         text email
         text locality
@@ -180,18 +181,21 @@ erDiagram
 ### Migraciones de Esquema (Schema Migration):
 - **Versión 1:** Tablas fundacionales de agricultores, parcelas, geometría, variedades y estimaciones.
 - **Versión 2:** Inclusión de la columna `image_path TEXT NULL` en la tabla `parcels` con migración progresiva `onUpgrade` (`migrator.addColumn(parcels, parcels.imagePath)`).
+- **Versión 3:** Códigos de registro autogenerados en `farmers.code`, `grape_varieties.code` y `harvest_seasons.code`, y abreviatura propia en `measurement_units.abbreviation`. La migración agrega las columnas, rellena los datos existentes (mueve el `AGR-###` que vivía en `document_number`, copia `kg`/`crate`/`ton` a la abreviatura y regenera `code` como `UNI-###`) y crea los índices únicos explícitos, porque `uniqueKeys` solo se aplica en la creación inicial y una base migrada quedaría sin ellos.
 
 ---
 
 ## Módulos y Funcionalidades
 
 ### 1. Gestión de Agricultores
-- **Código Correlativo Autogenerado:** Formato prefijado `AGR-001`, `AGR-002`, incrementado automáticamente.
+- **Código de Registro de Solo Lectura:** Correlativo autogenerado con formato `AGR-001`, `AGR-002`. Se muestra como campo `Código` (etiqueta corta `COD`) que el usuario no puede modificar; el sistema lo asigna y evita conflictos.
+- **Documento/CI Opcional:** Campo `Documento` independiente del código y opcional, junto al resto de los datos.
+- **Validación de Nombre y Apellido:** solo letras (incluye acentos y `Ñ`) y espacios internos; se eliminan los espacios al inicio y al fin y se colapsan los repetidos.
 - Registro de nombres, apellidos, teléfono, correo electrónico, localidad y domicilio.
 - Regla de integridad: no se permite eliminar un agricultor si tiene parcelas vinculadas activas.
 
 ### 2. Catastro de Parcelas
-- **Código Correlativo Autogenerado:** Formato prefijado `PAR-001`, `PAR-002`.
+- **Código de Registro de Solo Lectura:** Correlativo autogenerado con formato `PAR-001`, `PAR-002`; el usuario lo ve pero no lo edita.
 - **Asociación Restringida a Agricultores:** No se permiten campos abiertos; se selecciona obligatoriamente de la lista existente de agricultores registrados.
 - **Fotografía de la Parcela:** Captura desde cámara o galería, almacenada de forma segura en la sandbox privada de la app.
 - **Unidad de Superficie Declarada:** Entrada en $m^2$ o $ha$ mediante un toggle interactivo (`SegmentedButton`) que recalcula y muestra la equivalencia en vivo.
@@ -207,15 +211,17 @@ erDiagram
 
 ### 4. Variedades Vitícolas
 - Catálogo editable de variedades de vid.
+- **Código de Registro de Solo Lectura:** Correlativo autogenerado con formato `UVA-001`, `UVA-002`.
 - **Categorías Restringidas:** Filtradas estrictamente a dos opciones universales: **Blanca** y **Tinta**.
 - Soporte para asociar múltiples variedades a una parcela indicando el porcentaje de distribución del terreno.
 
 ### 5. Estimaciones de Producción
-- Registro de estimaciones por temporada de vendimia (`HarvestSeason`) y unidad de medida (`MeasurementUnit`).
+- Registro de estimaciones por temporada de vendimia (`HarvestSeason`) y unidad de medida (`MeasurementUnit`). La temporada usa un código `TEM-###` y la unidad un código `UNI-###`, ambos de solo lectura.
+- **Abreviatura de Unidad Editable:** La unidad conserva su abreviatura (`kg`, `cajón`, `ton`) en un campo propio, obligatorio y único, que es el que se muestra junto a las cantidades y el que el usuario necesita para crear sus propias unidades y convertir a kilogramos.
 - **Factor de Conversión Flexible:** Admite unidades estándar (kg, Tonelada con factor 1000) o configurables (cajón) parseando números con decimales y separadores regionales (`1000,00` o `1000`).
 
 ### 6. Exportación de Respaldos (JSON y ZIP)
-- **JSON Estructurado:** Vaciado íntegro de todas las tablas con marcas de tiempo en formato ISO-8601.
+- **JSON Estructurado:** Vaciado íntegro de todas las tablas con marcas de tiempo en formato ISO-8601. El formato va marcado con `schemaVersion` (v2 desde la inclusión del código de registro y la abreviatura de unidad).
 - **Respaldo ZIP Completo:** Empaqueta:
   - `data.json`: Todas las entidades catastrales.
   - `manifest.json`: Información de versión y estructura.
@@ -286,9 +292,17 @@ El proyecto cuenta con verificación continua de sintaxis y suite de pruebas aut
   ```
   Pruebas incluidas en `test/unit/`:
   - `parcel_registration_flow_test.dart`: Flujo completo de código correlativo, creación de agricultor, parcela con imagen, vínculo de titularidad y verificación del siguiente correlativo.
+  - `person_name_validation_test.dart`: Normalización y validación de nombres y apellidos (acentos, `Ñ`, espacios internos y de extremos).
+  - `registration_code_test.dart`: Formato, parseo y generación del siguiente código; autoridad del repositorio sobre los códigos en las cinco entidades.
+  - `schema_migration_test.dart`: Migración real v2 → v3 (columnas, relleno de datos, índices únicos y rechazo de duplicados).
+  - `measurement_unit_test.dart`: Abreviatura visible de la unidad con caída al código cuando falta.
+  - `export_payload_test.dart`: El respaldo JSON incluye el código de registro y la abreviatura.
   - `parcel_services_test.dart`: Algoritmos de cálculo de área esférica y validación geométrica de polígonos.
   - `production_math_test.dart`: Cálculos de rendimiento y factores de conversión de cosecha.
   - `widget_test.dart`: Verificación de renderizado inicial de la interfaz.
+
+  Pruebas de widget en `test/widget/`:
+  - `farmer_form_test.dart`: El campo `Código` es de solo lectura y el campo `Documento` sigue editable.
 
 ---
 

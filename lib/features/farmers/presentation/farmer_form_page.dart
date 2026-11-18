@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/validation/person_name_input_formatter.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/section_card.dart';
@@ -51,6 +52,7 @@ class _FarmerForm extends ConsumerStatefulWidget {
 
 class _FarmerFormState extends ConsumerState<_FarmerForm> {
   final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _code;
   late final TextEditingController _firstName;
   late final TextEditingController _lastName;
   late final TextEditingController _document;
@@ -65,6 +67,7 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
   void initState() {
     super.initState();
     final farmer = widget.farmer;
+    _code = TextEditingController(text: farmer?.code ?? '');
     _firstName = TextEditingController(text: farmer?.firstName ?? '');
     _lastName = TextEditingController(text: farmer?.lastName ?? '');
     _document = TextEditingController(text: farmer?.documentNumber ?? '');
@@ -81,9 +84,9 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
 
   Future<void> _loadNextCode() async {
     final code = await ref.read(farmerRepositoryProvider).nextCode();
-    if (mounted && _document.text.isEmpty) {
+    if (mounted && _code.text.isEmpty) {
       setState(() {
-        _document.text = code;
+        _code.text = code;
       });
     }
   }
@@ -91,6 +94,7 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
   @override
   void dispose() {
     for (final controller in [
+      _code,
       _firstName,
       _lastName,
       _document,
@@ -112,8 +116,9 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
     final existing = widget.farmer;
     final farmer = Farmer(
       id: existing?.id ?? const Uuid().v4(),
-      firstName: _firstName.text.trim(),
-      lastName: _lastName.text.trim(),
+      code: _code.text.trim(),
+      firstName: Validators.normalizePersonName(_firstName.text),
+      lastName: Validators.normalizePersonName(_lastName.text),
       documentNumber: _document.text,
       phone: _phone.text,
       email: _email.text,
@@ -153,7 +158,8 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
                     controller: _firstName,
                     decoration: const InputDecoration(labelText: 'Nombre *'),
                     textCapitalization: TextCapitalization.words,
-                    validator: (value) => Validators.requiredText(
+                    inputFormatters: const [PersonNameInputFormatter()],
+                    validator: (value) => Validators.requiredName(
                       value,
                       message: 'Ingresa el nombre.',
                     ),
@@ -163,17 +169,29 @@ class _FarmerFormState extends ConsumerState<_FarmerForm> {
                     controller: _lastName,
                     decoration: const InputDecoration(labelText: 'Apellido *'),
                     textCapitalization: TextCapitalization.words,
-                    validator: (value) => Validators.requiredText(
+                    inputFormatters: const [PersonNameInputFormatter()],
+                    validator: (value) => Validators.requiredName(
                       value,
                       message: 'Ingresa el apellido.',
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
+                    controller: _code,
+                    readOnly: true,
+                    canRequestFocus: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Código',
+                      helperText: 'COD · asignado por el sistema',
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
                     controller: _document,
                     decoration: const InputDecoration(
-                      labelText: 'Código / Documento *',
-                      helperText: 'Código correlativo autogenerado',
+                      labelText: 'Documento',
+                      helperText: 'CI u otro documento (opcional)',
                     ),
                     textCapitalization: TextCapitalization.characters,
                   ),

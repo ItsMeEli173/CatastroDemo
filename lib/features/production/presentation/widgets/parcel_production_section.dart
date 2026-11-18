@@ -282,7 +282,7 @@ class _EstimateTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unitCode = unit?.code ?? 'unidad';
+    final unitCode = unit?.displayAbbreviation ?? 'unidad';
     final notes = estimate.notes;
     final subtitle = [
       variety == null
@@ -490,7 +490,7 @@ class _EstimateDialogState extends ConsumerState<_EstimateDialog> {
                 for (final unit in widget.units)
                   DropdownMenuItem(
                     value: unit.id,
-                    child: Text('${unit.name} (${unit.code})'),
+                    child: Text('${unit.name} (${unit.displayAbbreviation})'),
                   ),
               ],
               onChanged: (value) {
@@ -510,7 +510,7 @@ class _EstimateDialogState extends ConsumerState<_EstimateDialog> {
                 labelText: 'Cantidad',
                 helperText: selectedUnit == null
                     ? null
-                    : 'En ${selectedUnit.code}',
+                    : 'En ${selectedUnit.displayAbbreviation}',
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,

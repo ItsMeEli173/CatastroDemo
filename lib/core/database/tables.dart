@@ -15,8 +15,15 @@ import '../../../features/parcels/domain/entities/parcel_vertex.dart';
 @DataClassName('FarmerRow')
 @TableIndex(name: 'idx_farmers_name', columns: {#lastName, #firstName})
 @TableIndex(name: 'idx_farmers_document', columns: {#documentNumber})
+@TableIndex(name: 'idx_farmers_code', columns: {#code})
 class Farmers extends Table {
   TextColumn get id => text()();
+
+  /// Correlativo de registro asignado por el sistema (`AGR-###`).
+  ///
+  /// Es anulable solo por la migración que rellena los registros anteriores a
+  /// la versión 3; el repositorio siempre escribe un valor.
+  TextColumn get code => text().nullable()();
   TextColumn get firstName => text().withLength(min: 1, max: 120)();
   TextColumn get lastName => text().withLength(min: 1, max: 120)();
   TextColumn get documentNumber => text().nullable()();
@@ -30,6 +37,11 @@ class Farmers extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {code},
+      ];
 }
 
 @DataClassName('ParcelRow')
@@ -139,6 +151,9 @@ class VertexPhotos extends Table {
 @TableIndex(name: 'idx_grape_varieties_active', columns: {#active})
 class GrapeVarieties extends Table {
   TextColumn get id => text()();
+
+  /// Correlativo de registro asignado por el sistema (`UVA-###`).
+  TextColumn get code => text().nullable()();
   TextColumn get name => text().withLength(min: 1, max: 80)();
   TextColumn get category => text().nullable()();
   TextColumn get description => text().nullable()();
@@ -153,6 +168,7 @@ class GrapeVarieties extends Table {
   @override
   List<Set<Column>> get uniqueKeys => [
         {name},
+        {code},
       ];
 }
 
@@ -187,6 +203,9 @@ class ParcelVarieties extends Table {
 @DataClassName('HarvestSeasonRow')
 class HarvestSeasons extends Table {
   TextColumn get id => text()();
+
+  /// Correlativo de registro asignado por el sistema (`TEM-###`).
+  TextColumn get code => text().nullable()();
   TextColumn get name => text().withLength(min: 1, max: 60)();
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get endDate => dateTime().nullable()();
@@ -200,6 +219,7 @@ class HarvestSeasons extends Table {
   @override
   List<Set<Column>> get uniqueKeys => [
         {name},
+        {code},
       ];
 
   @override
@@ -211,7 +231,15 @@ class HarvestSeasons extends Table {
 @DataClassName('MeasurementUnitRow')
 class MeasurementUnits extends Table {
   TextColumn get id => text()();
+
+  /// Correlativo de registro asignado por el sistema (`UNI-###`).
   TextColumn get code => text().withLength(min: 1, max: 16)();
+
+  /// Abreviatura visible y editable por el usuario (`kg`, `cajón`, `ton`).
+  ///
+  /// Es la que se muestra junto a las cantidades y la que el usuario necesita
+  /// para crear sus propias unidades y convertirlas a kilogramos.
+  TextColumn get abbreviation => text().nullable()();
   TextColumn get name => text().withLength(min: 1, max: 60)();
   RealColumn get kilogramsEquivalent => real().nullable()();
   BoolColumn get active => boolean().withDefault(const Constant(true))();
@@ -224,6 +252,7 @@ class MeasurementUnits extends Table {
   @override
   List<Set<Column>> get uniqueKeys => [
         {code},
+        {abbreviation},
       ];
 
   @override

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/production_daos.dart';
+import '../../../../core/database/registration_code.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
 import '../domain/entities/harvest_season.dart';
@@ -37,6 +38,21 @@ class DriftHarvestSeasonRepository implements HarvestSeasonRepository {
   }
 
   @override
+  Future<String> nextCode() async =>
+      RegistrationCode.next('TEM-', (await _dao.allCodes()).toSet());
+
+  /// Resuelve el código que se guardará (ver [DriftFarmerRepository]).
+  Future<String> _resolveCode(HarvestSeason season) async {
+    final provided = season.code?.trim() ?? '';
+    if (provided.isNotEmpty) {
+      final owner = await _dao.findByCode(provided);
+      if (owner == null || owner.id == season.id) return provided;
+    }
+    final current = (await _dao.findById(season.id))?.code?.trim() ?? '';
+    return current.isNotEmpty ? current : nextCode();
+  }
+
+  @override
   Future<void> save(HarvestSeason season) async {
     final nameError = Validators.requiredText(
       season.name,
@@ -55,10 +71,12 @@ class DriftHarvestSeasonRepository implements HarvestSeasonRepository {
     if (duplicate != null && duplicate.id != season.id) {
       throw const ValidationFailure('Ya existe una temporada con ese nombre.');
     }
+    final code = await _resolveCode(season);
     try {
       await _dao.upsert(
         HarvestSeasonsCompanion(
           id: Value(season.id),
+          code: Value(code),
           name: Value(season.name.trim()),
           startDate: Value(season.startDate?.toUtc()),
           endDate: Value(season.endDate?.toUtc()),
@@ -120,13 +138,29 @@ class DriftMeasurementUnitRepository implements MeasurementUnitRepository {
   }
 
   @override
+  Future<String> nextCode() async =>
+      RegistrationCode.next('UNI-', (await _dao.allCodes()).toSet());
+
+  /// Resuelve el código que se guardará (ver [DriftFarmerRepository]).
+  Future<String> _resolveCode(MeasurementUnit unit) async {
+    final provided = unit.code.trim();
+    if (provided.isNotEmpty) {
+      final owner = await _dao.findByCode(provided);
+      if (owner == null || owner.id == unit.id) return provided;
+    }
+    final current = (await _dao.findById(unit.id))?.code.trim() ?? '';
+    return current.isNotEmpty ? current : nextCode();
+  }
+
+  @override
   Future<void> save(MeasurementUnit unit) async {
-    final codeError = Validators.requiredCode(
-      unit.code,
-      message: 'Ingresa el código de la unidad.',
+    final abbreviation = unit.abbreviation?.trim() ?? '';
+    final abbreviationError = Validators.requiredText(
+      abbreviation,
+      message: 'Ingresa la abreviatura de la unidad.',
       maxLength: 16,
     );
-    if (codeError != null) throw ValidationFailure(codeError);
+    if (abbreviationError != null) throw ValidationFailure(abbreviationError);
     final nameError = Validators.requiredText(
       unit.name,
       message: 'Ingresa el nombre de la unidad.',
@@ -139,15 +173,19 @@ class DriftMeasurementUnitRepository implements MeasurementUnitRepository {
         'La equivalencia en kilogramos debe ser mayor a cero.',
       );
     }
-    final duplicate = await _dao.findByCode(unit.code);
+    final duplicate = await _dao.findByAbbreviation(abbreviation);
     if (duplicate != null && duplicate.id != unit.id) {
-      throw const ValidationFailure('Ya existe una unidad con ese código.');
+      throw const ValidationFailure(
+        'Ya existe una unidad con esa abreviatura.',
+      );
     }
+    final code = await _resolveCode(unit);
     try {
       await _dao.upsert(
         MeasurementUnitsCompanion(
           id: Value(unit.id),
-          code: Value(unit.code.trim()),
+          code: Value(code),
+          abbreviation: Value(abbreviation),
           name: Value(unit.name.trim()),
           kilogramsEquivalent: Value(unit.kilogramsEquivalent),
           active: Value(unit.active),
@@ -265,6 +303,7 @@ String? _clean(String? value) {
 extension HarvestSeasonRowMapper on HarvestSeasonRow {
   HarvestSeason toSeasonEntity() => HarvestSeason(
         id: id,
+        code: code,
         name: name,
         startDate: startDate,
         endDate: endDate,
@@ -278,6 +317,7 @@ extension MeasurementUnitRowMapper on MeasurementUnitRow {
   MeasurementUnit toUnitEntity() => MeasurementUnit(
         id: id,
         code: code,
+        abbreviation: abbreviation,
         name: name,
         kilogramsEquivalent: kilogramsEquivalent,
         active: active,
