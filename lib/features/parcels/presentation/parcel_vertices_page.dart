@@ -133,6 +133,47 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
 
   
 
+  /// Edita las coordenadas de un vértice manual, en memoria.
+  ///
+  /// Sólo se ofrece a los vértices manuales: los capturados con GPS conservan
+  /// la posición medida. El cambio queda pendiente de guardar con «Guardar
+  /// geometría».
+  Future<void> _editCoordinates(ParcelVertex vertex) async {
+    final result = await showDialog<Map<String, double>>(
+      context: context,
+      builder: (_) => ManualVertexDialog(
+        initialLatitude: vertex.latitude,
+        initialLongitude: vertex.longitude,
+      ),
+    );
+    if (result == null || !mounted) return;
+    final vertices = _vertices;
+    if (vertices == null) return;
+    final lat = result['lat']!;
+    final lon = result['lon']!;
+    setState(() {
+      _vertices = [
+        for (final v in vertices)
+          if (v.id == vertex.id)
+            ParcelVertex(
+              id: v.id,
+              parcelId: v.parcelId,
+              sequenceNumber: v.sequenceNumber,
+              latitude: lat,
+              longitude: lon,
+              accuracyM: v.accuracyM,
+              captureMethod: v.captureMethod,
+              capturedAt: v.capturedAt,
+              createdAt: v.createdAt,
+              updatedAt: DateTime.now().toUtc(),
+            )
+          else
+            v,
+      ];
+      _dirty = true;
+    });
+  }
+
   void _move(int index, int offset) {
     final vertices = _vertices;
     if (vertices == null) return;
@@ -301,6 +342,8 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
                                     tooltip: 'Ordenar',
                                     onSelected: (value) {
                                       switch (value) {
+                                        case 'edit':
+                                          _editCoordinates(vertex);
                                         case 'up':
                                           _move(index, -1);
                                         case 'down':
@@ -309,16 +352,22 @@ class _ParcelVerticesPageState extends ConsumerState<ParcelVerticesPage> {
                                           _remove(index);
                                       }
                                     },
-                                    itemBuilder: (context) => const [
-                                      PopupMenuItem(
+                                    itemBuilder: (context) => [
+                                      if (vertex.captureMethod ==
+                                          VertexCaptureMethod.manual)
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Editar coordenadas'),
+                                        ),
+                                      const PopupMenuItem(
                                         value: 'up',
                                         child: Text('Mover arriba'),
                                       ),
-                                      PopupMenuItem(
+                                      const PopupMenuItem(
                                         value: 'down',
                                         child: Text('Mover abajo'),
                                       ),
-                                      PopupMenuItem(
+                                      const PopupMenuItem(
                                         value: 'remove',
                                         child: Text('Eliminar'),
                                       ),
