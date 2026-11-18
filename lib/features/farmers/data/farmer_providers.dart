@@ -22,6 +22,6 @@ final farmerProvider = FutureProvider.family<Farmer?, String>(
 );
 
 /// Cantidad total de agricultores registrados.
-final farmerCountProvider = FutureProvider<int>(
-  (ref) => ref.watch(farmerRepositoryProvider).count(),
+final farmerCountProvider = StreamProvider<int>(
+  (ref) => ref.watch(farmerRepositoryProvider).watchCount(),
 );

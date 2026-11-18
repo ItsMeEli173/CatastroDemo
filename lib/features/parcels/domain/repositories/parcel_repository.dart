@@ -18,6 +18,8 @@ abstract interface class ParcelRepository {
 
   Future<int> count();
 
+  Stream<int> watchCount();
+
   /// Genera el siguiente código correlativo de parcela (ej. PAR-001).
   Future<String> nextCode();
 

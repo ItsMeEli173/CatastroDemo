@@ -65,6 +65,9 @@ class DriftParcelRepository implements ParcelRepository {
   Future<int> count() => _parcelDao.count();
 
   @override
+  Stream<int> watchCount() => _parcelDao.watchCount();
+
+  @override
   Future<String> nextCode() async {
     final total = await _parcelDao.count();
     var candidateNum = total + 1;

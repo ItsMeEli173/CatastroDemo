@@ -31,6 +31,9 @@ class DriftFarmerRepository implements FarmerRepository {
   Future<int> count() => _dao.count();
 
   @override
+  Stream<int> watchCount() => _dao.watchCount();
+
+  @override
   Future<String> nextCode() async {
     final total = await _dao.count();
     var candidateNum = total + 1;

@@ -81,6 +81,12 @@ class ParcelDao extends DatabaseAccessor<AppDatabase> with _$ParcelDaoMixin {
     return rows.map((row) => row.readTable(parcels)).toList();
   }
 
+  Stream<int> watchCount() {
+    final countExpression = parcels.id.count();
+    final query = selectOnly(parcels)..addColumns([countExpression]);
+    return query.map((row) => row.read(countExpression) ?? 0).watchSingle();
+  }
+
   Future<int> count() async {
     final countExpression = parcels.id.count();
     final query = selectOnly(parcels)..addColumns([countExpression]);

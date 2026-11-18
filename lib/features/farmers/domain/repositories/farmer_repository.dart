@@ -10,6 +10,8 @@ abstract interface class FarmerRepository {
 
   Future<int> count();
 
+  Stream<int> watchCount();
+
   /// Genera el siguiente código correlativo de agricultor (ej. AGR-001).
   Future<String> nextCode();
 

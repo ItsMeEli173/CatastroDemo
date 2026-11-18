@@ -47,6 +47,12 @@ class FarmerDao extends DatabaseAccessor<AppDatabase> with _$FarmerDaoMixin {
   Future<FarmerRow?> findById(String id) =>
       (select(farmers)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  Stream<int> watchCount() {
+    final countExpression = farmers.id.count();
+    final query = selectOnly(farmers)..addColumns([countExpression]);
+    return query.map((row) => row.read(countExpression) ?? 0).watchSingle();
+  }
+
   Future<int> count() async {
     final countExpression = farmers.id.count();
     final query = selectOnly(farmers)..addColumns([countExpression]);
