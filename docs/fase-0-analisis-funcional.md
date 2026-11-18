@@ -132,11 +132,13 @@ Reglas de navegación: confirmación antes de operaciones destructivas; mapa con
 
 | Campo / operación | Obligatorio | Regla | Momento | Mensaje (es) |
 |---|---|---|---|---|
-| Agricultor: nombres/apellidos | Sí | no vacío, ≤120 | formulario + entidad | "Ingresa los nombres." / "Ingresa los apellidos." |
+| Agricultor: nombres/apellidos | Sí | solo letras (incluye acentos y `Ñ`) y espacios internos; sin espacios al inicio/fin; ≤120 | formulario + entidad + BD | "Ingresa los nombres." / "Ingresa los apellidos." |
 | Agricultor: correo | No | formato de correo | formulario | "Ingresa un correo válido." |
 | Agricultor: teléfono | No | 6–25, solo `+`, dígitos, espacio, `-`, `()` | formulario | "Ingresa un teléfono válido." |
 | Agricultor: eliminar con parcelas | — | bloqueado | diálogo + repositorio | "No se puede eliminar: tiene parcelas asociadas." |
-| Parcela: código | Sí | ≤40, único | formulario + BD | "Ingresa el código de la parcela." / "Ya existe una parcela con ese código." |
+| Códigos de registro (agricultor, parcela, variedad, unidad, temporada) | — | autogenerado y único; de solo lectura | repositorio + BD | — |
+| Agricultor: documento/CI | No | libre | formulario | — |
+| Parcela: código | — | autogenerado `PAR-###`, único, solo lectura | repositorio + BD | — |
 | Parcela: superficie declarada | No | ≥ 0 | formulario | "La superficie declarada no puede ser negativa." |
 | Parcela activa | — | ≥3 vértices y polígono válido | guardar/activar | "Una parcela activa necesita al menos 3 vértices válidos." |
 | Propietario: porcentaje | No | 0–100 | formulario + BD | "El porcentaje debe estar entre 0 y 100." |
@@ -153,7 +155,7 @@ Reglas de navegación: confirmación antes de operaciones destructivas; mapa con
 | Estimación: cantidad | Sí | > 0 | formulario + BD | "Ingresa una cantidad mayor a cero." |
 | Estimación: factor | Sí | > 0 | formulario + BD | "El factor de conversión debe ser mayor a cero." |
 | Temporada: nombre | Sí | único | formulario + BD | "Ingresa el nombre de la temporada." |
-| Unidad: código | Sí | único | formulario + BD | "Ingresa el código de la unidad." |
+| Unidad: abreviatura | Sí | única | formulario + BD | "Ingresa la abreviatura de la unidad." / "Ya existe una unidad con esa abreviatura." |
 | Exportación | — | informar éxito/fallo | acción | "Exportación completada." / "No se pudo exportar." |
 
 ## 8. Requisitos no funcionales

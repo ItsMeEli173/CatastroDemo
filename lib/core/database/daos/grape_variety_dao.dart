@@ -61,6 +61,19 @@ class GrapeVarietyDao extends DatabaseAccessor<AppDatabase>
         ..where((t) => t.name.lower().equals(name.trim().toLowerCase())))
       .getSingleOrNull();
 
+  Future<GrapeVarietyRow?> findByCode(String code) =>
+      (select(grapeVarieties)..where((t) => t.code.equals(code.trim())))
+          .getSingleOrNull();
+
+  /// Códigos de registro ya asignados, para no repetirlos.
+  Future<List<String>> allCodes() async {
+    final query = selectOnly(grapeVarieties)
+      ..addColumns([grapeVarieties.code])
+      ..where(grapeVarieties.code.isNotNull());
+    final rows = await query.get();
+    return [for (final row in rows) ?row.read(grapeVarieties.code)];
+  }
+
   /// Cantidad de parcelas que usan la variedad.
   Future<int> countParcelUsage(String grapeVarietyId) async {
     final countExpression = parcelVarieties.id.count();

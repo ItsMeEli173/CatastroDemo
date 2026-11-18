@@ -15,6 +15,9 @@ abstract interface class GrapeVarietyRepository {
 
   Future<GrapeVariety?> findById(String id);
 
+  /// Genera el siguiente código correlativo de variedad (ej. UVA-001).
+  Future<String> nextCode();
+
   Future<void> save(GrapeVariety variety);
 
   /// Falla con [InUseFailure] si la variedad está asociada a una parcela.

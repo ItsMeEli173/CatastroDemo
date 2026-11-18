@@ -7,13 +7,17 @@ class MeasurementUnit {
     required this.active,
     required this.createdAt,
     required this.updatedAt,
+    this.abbreviation,
     this.kilogramsEquivalent,
   });
 
   final String id;
 
-  /// Código único corto, por ejemplo `kg`, `crate`, `ton`.
+  /// Correlativo de registro asignado por el sistema (`UNI-###`).
   final String code;
+
+  /// Abreviatura visible y editable por el usuario (`kg`, `crate`, `ton`).
+  final String? abbreviation;
   final String name;
 
   /// Equivalencia en kg por unidad; nula cuando el factor se define en cada
@@ -24,4 +28,11 @@ class MeasurementUnit {
   final DateTime updatedAt;
 
   bool get hasFixedFactor => kilogramsEquivalent != null;
+
+  /// Abreviatura visible; cae al código cuando falta (filas anteriores a la
+  /// migración v3).
+  String get displayAbbreviation {
+    final value = abbreviation?.trim() ?? '';
+    return value.isEmpty ? code : value;
+  }
 }

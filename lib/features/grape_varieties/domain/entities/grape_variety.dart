@@ -6,12 +6,16 @@ class GrapeVariety {
     required this.active,
     required this.createdAt,
     required this.updatedAt,
+    this.code,
     this.category,
     this.description,
     this.aliases,
   });
 
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`UVA-###`).
+  final String? code;
   final String name;
 
   /// Clasificación libre, por ejemplo `Blanca` o `Tinta`.

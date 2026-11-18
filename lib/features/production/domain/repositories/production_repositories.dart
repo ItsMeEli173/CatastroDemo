@@ -12,6 +12,9 @@ abstract interface class HarvestSeasonRepository {
 
   Future<HarvestSeason?> findByName(String name);
 
+  /// Genera el siguiente código correlativo de temporada (ej. TEM-001).
+  Future<String> nextCode();
+
   Future<void> save(HarvestSeason season);
 
   /// Falla con [InUseFailure] si la temporada tiene estimaciones.
@@ -27,6 +30,9 @@ abstract interface class MeasurementUnitRepository {
   Future<MeasurementUnit?> findById(String id);
 
   Future<MeasurementUnit?> findByCode(String code);
+
+  /// Genera el siguiente código correlativo de unidad (ej. UNI-001).
+  Future<String> nextCode();
 
   Future<void> save(MeasurementUnit unit);
 
