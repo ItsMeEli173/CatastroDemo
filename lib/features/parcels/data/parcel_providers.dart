@@ -69,6 +69,6 @@ final parcelVerticesProvider =
 );
 
 /// Cantidad total de parcelas registradas.
-final parcelCountProvider = FutureProvider<int>(
-  (ref) => ref.watch(parcelRepositoryProvider).count(),
+final parcelCountProvider = StreamProvider<int>(
+  (ref) => ref.watch(parcelRepositoryProvider).watchCount(),
 );
