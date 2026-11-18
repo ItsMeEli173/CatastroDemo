@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/core_providers.dart';
 import '../../../core/media/photo_picker_service.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/photo_button.dart';
+import '../../../core/widgets/photo_viewer.dart';
 import '../data/vertex_photo_providers.dart';
 import '../domain/entities/vertex_photo.dart';
 
@@ -65,6 +67,7 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
     }
   }
 
+  /// Elimina la foto desde la papelera de la lista, con su propia confirmación.
   Future<void> _delete(VertexPhoto photo) async {
     final confirmed = await confirmAction(
       context,
@@ -74,6 +77,12 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
       destructive: true,
     );
     if (!confirmed) return;
+    await _deletePhoto(photo);
+  }
+
+  /// Elimina la fila y el archivo. No confirma: la confirmación la aporta el
+  /// llamador (la papelera de la lista o el visor).
+  Future<void> _deletePhoto(VertexPhoto photo) async {
     setState(() => _busy = true);
     try {
       await ref.read(vertexPhotoRepositoryProvider).delete(photo.id);
@@ -83,6 +92,26 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Abre la foto del vértice a pantalla completa, con borrado.
+  Future<void> _openPhoto(VertexPhoto photo) async {
+    final file =
+        await ref.read(photoStorageProvider).resolve(photo.relativePath);
+    if (!mounted) return;
+    if (file == null) {
+      showMessage(context, 'La imagen ya no está disponible.');
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PhotoViewer(
+          file: file,
+          title: 'Fotografía del vértice',
+          onDelete: () => _deletePhoto(photo),
+        ),
+      ),
+    );
   }
 
   @override
@@ -135,6 +164,7 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
                               contentPadding: EdgeInsets.zero,
                               leading: _PhotoThumbnail(
                                 relativePath: photo.relativePath,
+                                onTap: () => _openPhoto(photo),
                               ),
                               title: Text(
                                 photo.fileName,
@@ -168,9 +198,10 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
 }
 
 class _PhotoThumbnail extends ConsumerWidget {
-  const _PhotoThumbnail({required this.relativePath});
+  const _PhotoThumbnail({required this.relativePath, required this.onTap});
 
   final String relativePath;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -185,19 +216,13 @@ class _PhotoThumbnail extends ConsumerWidget {
             child: Icon(Icons.broken_image_outlined),
           );
         }
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: Image.file(
-            file,
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const SizedBox(
-              width: 48,
-              height: 48,
-              child: Icon(Icons.broken_image_outlined),
-            ),
-          ),
+        return PhotoButton(
+          file: file,
+          width: 48,
+          height: 48,
+          borderRadius: 6,
+          showHint: false,
+          onTap: onTap,
         );
       },
     );

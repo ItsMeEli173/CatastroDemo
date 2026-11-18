@@ -139,4 +139,11 @@ class ParcelDao extends DatabaseAccessor<AppDatabase> with _$ParcelDaoMixin {
     final rows = await query.get();
     return rows.map((row) => row.readTable(vertexPhotos).relativePath).toList();
   }
+
+  /// Rutas relativas de la fotografía de cada parcela que tiene una.
+  Future<List<String>> allImagePaths() async {
+    final rows =
+        await (select(parcels)..where((t) => t.imagePath.isNotNull())).get();
+    return [for (final row in rows) row.imagePath!];
+  }
 }

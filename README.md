@@ -107,7 +107,7 @@ lib/
 │   ├── media/                           # Servicio de selección de fotos
 │   ├── storage/                         # Almacenamiento privado de imágenes (PhotoStorage)
 │   ├── validation/                      # Validadores compartidos (Validators)
-│   └── widgets/                         # Componentes UI reutilizables (SectionCard, AsyncView)
+│   └── widgets/                         # Componentes UI reutilizables (SectionCard, AsyncView, PhotoViewer, PhotoButton)
 ├── features/                            # Módulos funcionales de la aplicación
 │   ├── data_export/                     # Exportación a JSON y ZIP con fotos
 │   ├── farmers/                         # Gestión de productores vitícolas
@@ -198,16 +198,18 @@ erDiagram
 - **Código de Registro de Solo Lectura:** Correlativo autogenerado con formato `PAR-001`, `PAR-002`; el usuario lo ve pero no lo edita.
 - **Asociación Restringida a Agricultores:** No se permiten campos abiertos; se selecciona obligatoriamente de la lista existente de agricultores registrados.
 - **Fotografía de la Parcela:** Captura desde cámara o galería, almacenada de forma segura en la sandbox privada de la app. Antes de escribirse, la imagen se recodifica como JPEG (calidad 80, lado mayor 1600 px); si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
+- **Visor de Fotografía:** La foto se muestra como botón; al tocar abre un visor a pantalla completa con zoom. Desde el visor del detalle se puede eliminar la foto (registro y archivo), y «Quitar foto» en el formulario también elimina el archivo del almacenamiento privado.
 - **Unidad de Superficie Declarada:** Entrada en $m^2$ o $ha$ mediante un toggle interactivo (`SegmentedButton`) que recalcula y muestra la equivalencia en vivo.
 
 ### 3. Vértices y Geometría en Tiempo Real
 - **Captura GPS:** Integra el sensor del dispositivo mediante `LocationService` obteniendo coordenadas y radio de precisión ($\pm\text{m}$).
-- **Ingreso Manual de Coordenadas:** Diálogo modular (`_ManualVertexDialog`) para introducir pares de latitud y longitud.
+- **Ingreso Manual de Coordenadas:** Diálogo modular (`ManualVertexDialog`) para introducir pares de latitud y longitud.
+- **Edición de Coordenadas Manuales:** El menú de cada vértice manual ofrece «Editar coordenadas» y reabre el diálogo precargado con la posición actual; los vértices capturados con GPS conservan su posición medida y no se editan.
 - **Recálculo de Superficie en Vivo:** Banner dinámico (`_VertexAreaBanner`) que evalúa el polígono al instante:
   - Valida que tenga al menos 3 vértices.
   - Verifica que no existan auto-intersecciones de aristas (`PolygonValidator`).
   - Calcula la superficie en $m^2$ y $ha$ usando la fórmula del excedente esférico (`ParcelAreaCalculator`).
-- **Previsualización de Imágenes en Vértices:** Miniaturas gráficas ($44\times 44\text{ px}$) en la lista de vértices para aquellos puntos que cuenten con fotografías tomadas en campo.
+- **Previsualización de Imágenes en Vértices:** Miniaturas gráficas ($44\times 44\text{ px}$) en la lista de vértices para aquellos puntos que cuenten con fotografías tomadas en campo. En el diálogo del vértice, cada miniatura abre el visor a pantalla completa y desde allí puede eliminarse la foto.
 
 ### 4. Variedades Vitícolas
 - Catálogo editable de variedades de vid.
@@ -299,12 +301,19 @@ El proyecto cuenta con verificación continua de sintaxis y suite de pruebas aut
   - `export_payload_test.dart`: El respaldo JSON incluye el código de registro y la abreviatura.
   - `photo_compressor_test.dart`: Reducción del lado mayor, salida JPEG, respeto del tamaño en imágenes chicas y `null` ante bytes que no son una imagen.
   - `photo_storage_test.dart`: La foto se guarda comprimida, y se conserva el original cuando el archivo no es una imagen o cuando comprimir no reduce el peso.
+  - `vertex_photo_clean_orphans_test.dart`: La depuración de huérfanos conserva las fotos de parcela y de vértice, y elimina solo el archivo sin registro.
   - `parcel_services_test.dart`: Algoritmos de cálculo de área esférica y validación geométrica de polígonos.
   - `production_math_test.dart`: Cálculos de rendimiento y factores de conversión de cosecha.
   - `widget_test.dart`: Verificación de renderizado inicial de la interfaz.
 
   Pruebas de widget en `test/widget/`:
   - `farmer_form_test.dart`: El campo `Código` es de solo lectura y el campo `Documento` sigue editable.
+  - `photo_viewer_test.dart`: Visor a pantalla completa con y sin borrado; confirmación antes de eliminar.
+  - `manual_vertex_dialog_test.dart`: Alta y edición de coordenadas en el diálogo del vértice manual, con validación de rango.
+  - `parcel_detail_photo_test.dart`: La foto del detalle abre el visor y su borrado limpia `imagePath` y elimina el archivo.
+  - `parcel_form_photo_test.dart`: La foto del formulario abre el visor de solo lectura; «Quitar foto» elimina el archivo.
+  - `parcel_vertices_page_test.dart`: «Editar coordenadas» solo aparece en vértices manuales y actualiza el punto mostrado.
+  - `vertex_photo_dialog_test.dart`: La miniatura abre el visor y el borrado desde allí recarga la lista.
 
   Sondas de verificación independiente en `test/probe/`:
   - `image_compression_probe_test.dart`: Sondas derivadas de las specs de compresión de imágenes por un verificador independiente: límites de escala, invariantes de no pérdida y preservación del comportamiento previo.

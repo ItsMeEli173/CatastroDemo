@@ -41,7 +41,7 @@ Escenarios: alta de agricultor; alta de parcela con propietarios; delimitación 
 | CU-08 | Definir temporadas y unidades | Temporadas históricas y factores de conversión configurables. |
 | CU-09 | Registrar estimación | Estimación general o por variedad con kg calculados y factor guardado. |
 | CU-10 | Consultar producción | Resumen por parcela/temporada sin doble conteo. |
-| CU-11 | Adjuntar fotografía a vértice | Archivo privado + metadatos; miniatura y previsualización. |
+| CU-11 | Adjuntar fotografía a vértice | Archivo privado + metadatos; visor a pantalla completa y borrado con confirmación. |
 | CU-12 | Exportar JSON / respaldo ZIP | Archivos compartibles con datos consistentes; no mutan datos. |
 | CU-13 | Consultar panel inicial | Conteos de agricultores y parcelas y accesos rápidos. |
 
@@ -72,31 +72,35 @@ Escenarios: alta de agricultor; alta de parcela con propietarios; delimitación 
 - RN-16 El cierre del polígono es implícito al representar; no se duplica el primer vértice.
 - RN-17 `sequence_number` es consecutivo desde 0 y único por parcela; reordenar renumerar en una transacción.
 - RN-18 El área se calcula con excedente esférico (radio medio 6 371 008,8 m), no con distancias sumadas ni grados cartesianos. Error típico < 0,1 % en parcelas de hasta pocos kilómetros; no es levantamiento topográfico.
+- RN-19 Los vértices capturados con GPS conservan su posición medida y no se editan; solo los vértices manuales admiten corregir sus coordenadas desde el editor de vértices.
 
 **Variedades**
-- RN-19 `name` obligatorio y único (sin distinguir mayúsculas); `active` controla la selección en nuevos registros sin romper historial.
-- RN-20 `planted_area_percentage` ∈ [0, 100]; duplicado de variedad en la misma parcela rechazado; suma ≠ 100 % advertida con confirmación, nunca corregida automáticamente.
-- RN-21 La superficie aproximada por variedad usa superficie calculada y, si no existe, la declarada; se etiqueta el origen.
+- RN-20 `name` obligatorio y único (sin distinguir mayúsculas); `active` controla la selección en nuevos registros sin romper historial.
+- RN-21 `planted_area_percentage` ∈ [0, 100]; duplicado de variedad en la misma parcela rechazado; suma ≠ 100 % advertida con confirmación, nunca corregida automáticamente.
+- RN-22 La superficie aproximada por variedad usa superficie calculada y, si no existe, la declarada; se etiqueta el origen.
 
 **Producción**
-- RN-22 `quantity` > 0; no se admiten cero ni negativos. `conversion_factor_kg` > 0 guardado en cada estimación.
-- RN-23 `estimated_kg = quantity × factor` redondeado a 2 decimales al presentar; se conserva el valor completo.
-- RN-24 Cambiar la equivalencia de una unidad no altera estimaciones existentes.
-- RN-25 Un resumen elige **un** modo: general (solo `grape_variety_id` nulo) o desglose por variedad. Nunca suma ambos.
-- RN-26 Una temporada no sobrescribe otra; el nombre es único.
+- RN-23 `quantity` > 0; no se admiten cero ni negativos. `conversion_factor_kg` > 0 guardado en cada estimación.
+- RN-24 `estimated_kg = quantity × factor` redondeado a 2 decimales al presentar; se conserva el valor completo.
+- RN-25 Cambiar la equivalencia de una unidad no altera estimaciones existentes.
+- RN-26 Un resumen elige **un** modo: general (solo `grape_variety_id` nulo) o desglose por variedad. Nunca suma ambos.
+- RN-27 Una temporada no sobrescribe otra; el nombre es único.
 
 **Fotografías**
-- RN-27 Nombre único `photo_<uuid>.<ext>`; ruta relativa `photos/<nombre>` en SQLite; nunca rutas absolutas.
-- RN-28 El archivo inexistente o dañado se muestra como no disponible y no bloquea el vértice ni la parcela.
-- RN-29 Eliminar un vértice elimina sus fotografías tras confirmación; los archivos huérfanos se detectan y depuran desde mantenimiento.
-- RN-30 La interfaz de la demo muestra una fotografía por vértice; el modelo admite varias.
-- RN-31 Al guardarla, la fotografía se recodifica como JPEG (calidad 80, lado mayor 1600 px) para reducir su peso; si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
+- RN-28 Nombre único `photo_<uuid>.<ext>`; ruta relativa `photos/<nombre>` en SQLite; nunca rutas absolutas.
+- RN-29 El archivo inexistente o dañado se muestra como no disponible y no bloquea el vértice ni la parcela.
+- RN-30 Eliminar un vértice elimina sus fotografías tras confirmación; los archivos huérfanos se detectan y depuran desde mantenimiento.
+- RN-31 La interfaz de la demo muestra una fotografía por vértice; el modelo admite varias.
+- RN-32 Al guardarla, la fotografía se recodifica como JPEG (calidad 80, lado mayor 1600 px) para reducir su peso; si el archivo no se puede decodificar o el resultado no reduce el peso, se conserva el original sin pérdida.
+- RN-33 La fotografía se muestra como botón en el detalle de parcela, el formulario y el diálogo del vértice; al tocar se abre un visor a pantalla completa con zoom. En el formulario el visor es de solo lectura.
+- RN-34 Desde el visor se puede eliminar la fotografía en el detalle de parcela y en el diálogo del vértice, previa confirmación: primero se elimina el registro y luego el archivo. «Quitar foto» en el formulario también elimina el archivo del almacenamiento privado.
+- RN-35 La depuración de huérfanos considera conocidas tanto las fotografías de vértice como las de parcela.
 
 **Exportación**
-- RN-32 JSON con `schema_version` `1.0`, `app_name`, `exported_at` UTC ISO 8601 y arreglos de todas las entidades.
-- RN-33 La lectura se ejecuta en una transacción consistente; no muta datos.
-- RN-34 ZIP `CatastroDemo_backup_YYYYMMDD.zip` con `manifest.json`, `data.json` y `photos/` disponibles.
-- RN-35 Sin credenciales, secretos ni rutas absolutas.
+- RN-36 JSON con `schema_version` `1.0`, `app_name`, `exported_at` UTC ISO 8601 y arreglos de todas las entidades.
+- RN-37 La lectura se ejecuta en una transacción consistente; no muta datos.
+- RN-38 ZIP `CatastroDemo_backup_YYYYMMDD.zip` con `manifest.json`, `data.json` y `photos/` disponibles.
+- RN-39 Sin credenciales, secretos ni rutas absolutas.
 
 ## 5. Modelo entidad-relación conceptual
 

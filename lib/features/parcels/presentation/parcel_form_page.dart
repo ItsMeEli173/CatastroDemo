@@ -9,6 +9,8 @@ import '../../../core/formatting/formatters.dart';
 import '../../../core/media/photo_picker_service.dart';
 import '../../../core/validation/validators.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/photo_button.dart';
+import '../../../core/widgets/photo_viewer.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../farmers/data/farmer_providers.dart';
 import '../../parcel_owners/data/parcel_owner_providers.dart';
@@ -159,6 +161,38 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
       }
     } catch (e) {
       if (mounted) showFailure(context, e);
+    }
+  }
+
+  /// Abre la foto a pantalla completa.
+  ///
+  /// En el formulario el visor es de solo lectura: la foto todavía no está
+  /// guardada y el borrado lo maneja el control «Quitar foto».
+  Future<void> _openPhoto(File file) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PhotoViewer(
+          file: file,
+          title: 'Fotografía de la parcela',
+        ),
+      ),
+    );
+  }
+
+  /// Quita la fotografía del formulario.
+  ///
+  /// Si la foto ya estaba persistida, además de limpiar la referencia en
+  /// memoria se elimina el archivo del almacenamiento privado. La imagen recién
+  /// elegida y todavía no copiada no vive en el almacenamiento privado, así que
+  /// no se toca.
+  Future<void> _removePhoto() async {
+    final path = _imagePath;
+    setState(() {
+      _tempPickedImageSource = null;
+      _imagePath = null;
+    });
+    if (path != null) {
+      await ref.read(photoStorageProvider).deleteRelative(path);
     }
   }
 
@@ -434,14 +468,11 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
               child: Column(
                 children: [
                   if (_tempPickedImageSource != null) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(_tempPickedImageSource!),
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
+                    PhotoButton(
+                      file: File(_tempPickedImageSource!),
+                      height: 180,
+                      width: double.infinity,
+                      onTap: () => _openPhoto(File(_tempPickedImageSource!)),
                     ),
                     const SizedBox(height: 8),
                   ] else if (_imagePath != null) ...[
@@ -450,14 +481,11 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
                       builder: (context, snap) {
                         final file = snap.data;
                         if (file != null && file.existsSync()) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              file,
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
+                          return PhotoButton(
+                            file: file,
+                            height: 180,
+                            width: double.infinity,
+                            onTap: () => _openPhoto(file),
                           );
                         }
                         return const Center(
@@ -489,12 +517,7 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
                         IconButton.outlined(
                           tooltip: 'Quitar foto',
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              _tempPickedImageSource = null;
-                              _imagePath = null;
-                            });
-                          },
+                          onPressed: _removePhoto,
                         ),
                       ],
                     ],
