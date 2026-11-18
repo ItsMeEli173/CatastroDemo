@@ -11,7 +11,10 @@ import '../../../core/widgets/photo_viewer.dart';
 import '../data/vertex_photo_providers.dart';
 import '../domain/entities/vertex_photo.dart';
 
-/// Diálogo para listar, agregar y eliminar fotografías de un vértice.
+/// Diálogo para ver, agregar y eliminar la fotografía de un vértice.
+///
+/// Un vértice tiene a lo sumo una foto: agregar una nueva reemplaza a la
+/// anterior.
 class VertexPhotoDialog extends ConsumerStatefulWidget {
   const VertexPhotoDialog({required this.vertexId, super.key});
 
@@ -117,7 +120,7 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Fotografías del vértice'),
+      title: const Text('Fotografía del vértice'),
       content: SizedBox(
         width: double.maxFinite,
         height: 360,
@@ -149,8 +152,8 @@ class _VertexPhotoDialogState extends ConsumerState<VertexPhotoDialog> {
                   : (_photos == null || _photos!.isEmpty)
                       ? const Center(
                           child: Text(
-                            'Sin fotografías. Son opcionales y se guardan en '
-                            'el almacenamiento privado de la aplicación.',
+                            'Sin fotografía. Es opcional y se guarda en el '
+                            'almacenamiento privado de la aplicación.',
                             textAlign: TextAlign.center,
                           ),
                         )
