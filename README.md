@@ -306,6 +306,9 @@ El proyecto cuenta con verificación continua de sintaxis y suite de pruebas aut
   Pruebas de widget en `test/widget/`:
   - `farmer_form_test.dart`: El campo `Código` es de solo lectura y el campo `Documento` sigue editable.
 
+  Sondas de verificación independiente en `test/probe/`:
+  - `image_compression_probe_test.dart`: Sondas derivadas de las specs de compresión de imágenes por un verificador independiente: límites de escala, invariantes de no pérdida y preservación del comportamiento previo.
+
 ---
 
 ## Flujo Git (Gitflow)
