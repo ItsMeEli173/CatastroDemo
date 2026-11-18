@@ -123,23 +123,32 @@ lib/
 
 ## Modelo de Persistencia y Base de Datos
 
-La base de datos SQLite se gestiona mediante Drift. A continuación se detallan las tablas principales y sus relaciones:
+La base de datos SQLite se gestiona mediante Drift. El esquema se declara en `lib/core/database/tables.dart`, la configuración y las migraciones en `app_database.dart`, y el acceso a datos en los DAO de `lib/core/database/daos/`.
+
+Convenciones del esquema:
+- La clave primaria `id` es un **UUID v4 en `TEXT`**, generado por la aplicación; nunca un entero autoincremental.
+- Los nombres de columna siguen `snake_case`; las fechas se guardan en **UTC**.
+- Las restricciones (`UNIQUE`, `CHECK`, `FOREIGN KEY`) se declaran en SQLite además de validarse en dominio.
+- Las claves foráneas se activan en cada apertura (`PRAGMA foreign_keys = ON`), por lo que los borrados en cascada y las restricciones se aplican de verdad.
+
+### 5.1 Diagrama entidad-relación
 
 ```mermaid
 erDiagram
     FARMERS ||--o{ PARCEL_OWNERS : "es titular en"
     PARCELS ||--o{ PARCEL_OWNERS : "pertenece a"
     PARCELS ||--o{ PARCEL_VERTICES : "está delimitada por"
-    PARCEL_VERTICES ||--o{ VERTEX_PHOTOS : "posee fotos"
+    PARCEL_VERTICES ||--o| VERTEX_PHOTOS : "posee 0..1 foto"
     PARCELS ||--o{ PARCEL_VARIETIES : "cultiva"
     GRAPE_VARIETIES ||--o{ PARCEL_VARIETIES : "se planta en"
     PARCELS ||--o{ PRODUCTION_ESTIMATES : "tiene estimaciones"
-    HARVEST_SEASONS ||--o{ PRODUCTION_ESTIMATES : "período de cosecha"
+    HARVEST_SEASONS ||--o{ PRODUCTION_ESTIMATES : "temporada de cosecha"
     MEASUREMENT_UNITS ||--o{ PRODUCTION_ESTIMATES : "unidad de medida"
+    GRAPE_VARIETIES ||--o{ PRODUCTION_ESTIMATES : "variedad (opcional)"
 
     FARMERS {
         text id PK
-        text code UK
+        text code UK "AGR-###, único"
         text first_name
         text last_name
         text document_number
@@ -147,41 +156,298 @@ erDiagram
         text email
         text locality
         text address
+        text notes
+        integer created_at
+        integer updated_at
     }
 
     PARCELS {
         text id PK
-        text code UK
+        text code UK "PAR-###, único"
         text name
         real declared_area_m2
         real calculated_area_m2
         text status
         text image_path
         text notes
+        integer created_at
+        integer updated_at
+    }
+
+    PARCEL_OWNERS {
+        text id PK
+        text parcel_id FK
+        text farmer_id FK
+        real ownership_percentage
+        text notes
+        integer created_at
+        integer updated_at
     }
 
     PARCEL_VERTICES {
         text id PK
         text parcel_id FK
-        int sequence_number
+        integer sequence_number
         real latitude
         real longitude
         real accuracy_m
         text capture_method
+        integer captured_at
+        integer created_at
+        integer updated_at
     }
 
     VERTEX_PHOTOS {
         text id PK
-        text vertex_id FK
+        text vertex_id FK "índice único"
         text relative_path
         text file_name
+        text description
+        integer created_at
+    }
+
+    GRAPE_VARIETIES {
+        text id PK
+        text code UK "UVA-###, único"
+        text name UK "único"
+        text category
+        text description
+        text aliases
+        integer active
+        integer created_at
+        integer updated_at
+    }
+
+    PARCEL_VARIETIES {
+        text id PK
+        text parcel_id FK
+        text grape_variety_id FK
+        real planted_area_percentage
+        text notes
+        integer created_at
+        integer updated_at
+    }
+
+    HARVEST_SEASONS {
+        text id PK
+        text code UK "TEM-###, único"
+        text name UK "único"
+        integer start_date
+        integer end_date
+        text notes
+        integer created_at
+        integer updated_at
+    }
+
+    MEASUREMENT_UNITS {
+        text id PK
+        text code UK "UNI-###, único"
+        text abbreviation UK "kg, crate, ton"
+        text name
+        real kilograms_equivalent
+        integer active
+        integer created_at
+        integer updated_at
+    }
+
+    PRODUCTION_ESTIMATES {
+        text id PK
+        text parcel_id FK
+        text season_id FK
+        text grape_variety_id FK "opcional"
+        real quantity
+        text unit_id FK
+        real conversion_factor_kg
+        real estimated_kg
+        text notes
+        integer created_at
+        integer updated_at
     }
 ```
 
-### Migraciones de Esquema (Schema Migration):
+### 5.2 Detalle de campos por tabla
+
+#### `farmers` — Agricultores
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `code` | TEXT | Único (`AGR-###`); anulable solo por la migración v3 |
+| `first_name` | TEXT | Obligatorio, 1–120 |
+| `last_name` | TEXT | Obligatorio, 1–120 |
+| `document_number` | TEXT | Opcional |
+| `phone` | TEXT | Opcional |
+| `email` | TEXT | Opcional |
+| `locality` | TEXT | Opcional |
+| `address` | TEXT | Opcional |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+
+#### `parcels` — Parcelas
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `code` | TEXT | Único (`PAR-###`), 1–40 |
+| `name` | TEXT | Opcional |
+| `declared_area_m2` | REAL | Opcional, `CHECK >= 0` |
+| `calculated_area_m2` | REAL | Opcional, `CHECK >= 0` (superficie geodésica) |
+| `status` | TEXT | Obligatorio (enum `ParcelStatus`) |
+| `image_path` | TEXT | Opcional, ruta relativa `photos/<archivo>` |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+
+#### `parcel_owners` — Titularidad agricultor ↔ parcela
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `parcel_id` | TEXT | FK → `parcels.id`, `ON DELETE CASCADE` |
+| `farmer_id` | TEXT | FK → `farmers.id`, `ON DELETE RESTRICT` |
+| `ownership_percentage` | REAL | Opcional, `CHECK` 0–100 |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+| — | — | `UNIQUE (parcel_id, farmer_id)` |
+
+#### `parcel_vertices` — Vértices geodésicos
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `parcel_id` | TEXT | FK → `parcels.id`, `ON DELETE CASCADE` |
+| `sequence_number` | INTEGER | Obligatorio, `CHECK >= 0` |
+| `latitude` | REAL | Obligatorio, `CHECK` −90–90 |
+| `longitude` | REAL | Obligatorio, `CHECK` −180–180 |
+| `accuracy_m` | REAL | Opcional (precisión GPS), `CHECK >= 0` |
+| `capture_method` | TEXT | Obligatorio (enum `VertexCaptureMethod`: GPS / manual) |
+| `captured_at` | INTEGER | Opcional, UTC |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+| — | — | `UNIQUE (parcel_id, sequence_number)` |
+
+#### `vertex_photos` — Fotografías de vértice (0..1 por vértice)
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `vertex_id` | TEXT | FK → `parcel_vertices.id`, `ON DELETE CASCADE` |
+| `relative_path` | TEXT | Obligatorio, `photos/<archivo>` |
+| `file_name` | TEXT | Obligatorio, `photo_<uuid>.<ext>` |
+| `description` | TEXT | Opcional |
+| `created_at` | INTEGER | Obligatorio, UTC |
+| — | — | `UNIQUE INDEX idx_vertex_photos_vertex (vertex_id)` → máximo 1 fila por vértice (RN-31) |
+
+#### `grape_varieties` — Variedades vitícolas
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `code` | TEXT | Único (`UVA-###`); anulable solo por migración |
+| `name` | TEXT | Obligatorio, 1–80, único |
+| `category` | TEXT | Opcional (`Blanca` / `Tinta`) |
+| `description` | TEXT | Opcional |
+| `aliases` | TEXT | Opcional |
+| `active` | INTEGER | Obligatorio, por defecto 1 |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+
+#### `parcel_varieties` — Variedad ↔ parcela y % de terreno
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `parcel_id` | TEXT | FK → `parcels.id`, `ON DELETE CASCADE` |
+| `grape_variety_id` | TEXT | FK → `grape_varieties.id`, `ON DELETE RESTRICT` |
+| `planted_area_percentage` | REAL | Opcional, `CHECK` 0–100 |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+| — | — | `UNIQUE (parcel_id, grape_variety_id)` |
+
+#### `harvest_seasons` — Temporadas de vendimia
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `code` | TEXT | Único (`TEM-###`) |
+| `name` | TEXT | Obligatorio, 1–60, único |
+| `start_date` | INTEGER | Opcional, UTC |
+| `end_date` | INTEGER | Opcional, UTC |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+| — | — | `CHECK (start_date <= end_date)` cuando ambas existen |
+
+#### `measurement_units` — Unidades de medida
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `code` | TEXT | Único (`UNI-###`), 1–16 |
+| `abbreviation` | TEXT | Único (`kg`, `crate`, `ton`); es la etiqueta visible |
+| `name` | TEXT | Obligatorio, 1–60 |
+| `kilograms_equivalent` | REAL | Opcional, `CHECK > 0` (nulo = factor definido por estimación) |
+| `active` | INTEGER | Obligatorio, por defecto 1 |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+
+#### `production_estimates` — Estimaciones de producción
+| Campo | Tipo | Restricciones |
+| --- | --- | --- |
+| `id` | TEXT | PK, UUID v4 |
+| `parcel_id` | TEXT | FK → `parcels.id`, `ON DELETE CASCADE` |
+| `season_id` | TEXT | FK → `harvest_seasons.id`, `ON DELETE RESTRICT` |
+| `grape_variety_id` | TEXT | FK → `grape_varieties.id`, `ON DELETE RESTRICT`; **nulo = estimación general** |
+| `quantity` | REAL | Obligatorio, `CHECK > 0` |
+| `unit_id` | TEXT | FK → `measurement_units.id`, `ON DELETE RESTRICT` |
+| `conversion_factor_kg` | REAL | Obligatorio, `CHECK > 0`; factor aplicado al registrar |
+| `estimated_kg` | REAL | Obligatorio, `CHECK >= 0`; `quantity × conversion_factor_kg` |
+| `notes` | TEXT | Opcional |
+| `created_at` / `updated_at` | INTEGER | Obligatorios, UTC |
+| — | — | **Sin `UNIQUE`**: una parcela admite varias estimaciones por temporada |
+
+### 5.3 Cómo se guardan las estimaciones de producción
+
+Cada fila de `production_estimates` es **una** estimación de cosecha y guarda, a la vez, la cantidad original y su equivalencia en kilogramos:
+
+- `quantity` + `unit_id`: la cantidad tal como la cargó el usuario y la unidad elegida (por ejemplo, `12.5` en la unidad `crate`).
+- `conversion_factor_kg`: el factor aplicado **en el momento del registro**. Se copia dentro de la fila, no se referencia; por eso cambiar después la equivalencia de una unidad no altera las estimaciones existentes (RN-25).
+- `estimated_kg`: el resultado persistido de `quantity × conversion_factor_kg` (RN-24). Se calcula en el repositorio con `ProductionMath.estimatedKg` antes de escribir y se guarda completo; el redondeo a 2 decimales es solo de presentación y no toca el valor almacenado.
+- `season_id`: la temporada de vendimia (`harvest_seasons`), obligatoria. `parcel_id`: la parcela, obligatoria.
+- `grape_variety_id`: **nulo** significa estimación **general de la parcela**; con valor, es la estimación de esa variedad concreta. Un resumen elige un modo u otro, nunca suma ambos (RN-26).
+- No hay restricción `UNIQUE` sobre `(parcel_id, season_id, grape_variety_id)`: se pueden registrar varias estimaciones para la misma parcela y temporada (una general y/o una por cada variedad).
+
+Ejemplo de fila almacenada:
+
+```json
+{
+  "id": "b1f0…",
+  "parcel_id": "c2a7…",
+  "season_id": "9d13…",
+  "grape_variety_id": null,
+  "quantity": 12.5,
+  "unit_id": "4e88…",
+  "conversion_factor_kg": 18.0,
+  "estimated_kg": 225.0,
+  "notes": "Muestra de la primera pasada",
+  "created_at": "2026-03-02T14:05:00Z",
+  "updated_at": "2026-03-02T14:05:00Z"
+}
+```
+
+Restricciones de integridad asociadas:
+- Borrar una **parcela** elimina en cascada sus estimaciones (`ON DELETE CASCADE`).
+- Borrar una **temporada** o una **unidad** usada por estimaciones se rechaza (`ON DELETE RESTRICT`); el dominio lo traduce a `InUseFailure` y ofrece desactivarla en su lugar.
+- La variedad de la estimación debe existir en `grape_varieties` (o ser nula).
+
+### 5.4 Relaciones y cardinalidades
+- Agricultor **N:M** parcela, resuelta por `parcel_owners` (con porcentaje de titularidad).
+- Parcela **1:N** vértices ordenados por `sequence_number`.
+- Vértice **1:0..1** fotografía (`vertex_photos`, RN-31).
+- Parcela **N:M** variedad, resuelta por `parcel_varieties` (con porcentaje de terreno).
+- Parcela **1:N** estimaciones; temporada **1:N** estimaciones; unidad **1:N** estimaciones; variedad **0..1:N** estimaciones.
+
+### 5.5 Índices
+Además de las claves únicas declaradas en cada tabla, el esquema crea índices para las consultas frecuentes: `idx_farmers_name`, `idx_farmers_document`, `idx_farmers_code`, `idx_parcels_status`, `idx_parcel_owners_farmer`, `idx_grape_varieties_active`, `idx_parcel_varieties_variety`, `idx_production_parcel_season`, `idx_production_season`, `idx_production_variety`, `idx_production_unit` y el índice **único** `idx_vertex_photos_vertex`.
+
+### 5.6 Catálogos sembrados
+Al crear la base desde cero (`onCreate`) se siembran catálogos editables:
+- Variedades: Moscatel de Alejandría (Blanca), Malbec (Tinta), Cabernet Sauvignon (Tinta), Syrah (Tinta).
+- Unidades: Kilogramo (`kg`, equivalencia 1.0), Cajón (`crate`, sin equivalencia universal), Tonelada (`ton`, equivalencia 1000.0).
+
+La equivalencia del cajón se define por estimación, no en el catálogo.
+
+### 5.7 Migraciones de esquema (`currentSchemaVersion = 4`)
 - **Versión 1:** Tablas fundacionales de agricultores, parcelas, geometría, variedades y estimaciones.
-- **Versión 2:** Inclusión de la columna `image_path TEXT NULL` en la tabla `parcels` con migración progresiva `onUpgrade` (`migrator.addColumn(parcels, parcels.imagePath)`).
+- **Versión 2:** Columna `image_path TEXT NULL` en `parcels` (`migrator.addColumn(parcels, parcels.imagePath)`).
 - **Versión 3:** Códigos de registro autogenerados en `farmers.code`, `grape_varieties.code` y `harvest_seasons.code`, y abreviatura propia en `measurement_units.abbreviation`. La migración agrega las columnas, rellena los datos existentes (mueve el `AGR-###` que vivía en `document_number`, copia `kg`/`crate`/`ton` a la abreviatura y regenera `code` como `UNI-###`) y crea los índices únicos explícitos, porque `uniqueKeys` solo se aplica en la creación inicial y una base migrada quedaría sin ellos.
+- **Versión 4:** Un vértice pasa a tener a lo sumo una fotografía (RN-31). La migración depura primero los duplicados históricos conservando la foto más antigua de cada vértice (mismo criterio que `findByVertex`), elimina el índice no único anterior y crea `idx_vertex_photos_vertex` como **único** sobre `vertex_photos(vertex_id)`. Los archivos de las filas eliminadas quedan huérfanos y se recuperan desde la depuración de mantenimiento (RN-30 y RN-35).
 
 ---
 
@@ -221,9 +487,10 @@ erDiagram
 - Registro de estimaciones por temporada de vendimia (`HarvestSeason`) y unidad de medida (`MeasurementUnit`). La temporada usa un código `TEM-###` y la unidad un código `UNI-###`, ambos de solo lectura.
 - **Abreviatura de Unidad Editable:** La unidad conserva su abreviatura (`kg`, `cajón`, `ton`) en un campo propio, obligatorio y único, que es el que se muestra junto a las cantidades y el que el usuario necesita para crear sus propias unidades y convertir a kilogramos.
 - **Factor de Conversión Flexible:** Admite unidades estándar (kg, Tonelada con factor 1000) o configurables (cajón) parseando números con decimales y separadores regionales (`1000,00` o `1000`).
+- **Persistencia:** cada estimación guarda la cantidad original, la unidad usada, el factor de conversión aplicado y su equivalencia en kilogramos. El detalle de campos y relaciones está en [Cómo se guardan las estimaciones de producción](#53-cómo-se-guardan-las-estimaciones-de-producción).
 
 ### 6. Exportación de Respaldos (JSON y ZIP)
-- **JSON Estructurado:** Vaciado íntegro de todas las tablas con marcas de tiempo en formato ISO-8601. El formato va marcado con `schemaVersion` (v2 desde la inclusión del código de registro y la abreviatura de unidad).
+- **JSON Estructurado:** Vaciado íntegro de todas las tablas con marcas de tiempo en formato ISO-8601. El formato va marcado con `schemaVersion` (v2 desde la inclusión del código de registro y la abreviatura de unidad; es la versión del **respaldo**, independiente del esquema de la base de datos, que va por la 4).
 - **Respaldo ZIP Completo:** Empaqueta:
   - `data.json`: Todas las entidades catastrales.
   - `manifest.json`: Información de versión y estructura.
@@ -296,12 +563,14 @@ El proyecto cuenta con verificación continua de sintaxis y suite de pruebas aut
   - `parcel_registration_flow_test.dart`: Flujo completo de código correlativo, creación de agricultor, parcela con imagen, vínculo de titularidad y verificación del siguiente correlativo.
   - `person_name_validation_test.dart`: Normalización y validación de nombres y apellidos (acentos, `Ñ`, espacios internos y de extremos).
   - `registration_code_test.dart`: Formato, parseo y generación del siguiente código; autoridad del repositorio sobre los códigos en las cinco entidades.
-  - `schema_migration_test.dart`: Migración real v2 → v3 (columnas, relleno de datos, índices únicos y rechazo de duplicados).
+  - `schema_migration_test.dart`: Migración real v2 → v4 y v3 → v4 (columnas, relleno de datos, índices únicos, deduplicación de fotos de vértice y rechazo de duplicados).
   - `measurement_unit_test.dart`: Abreviatura visible de la unidad con caída al código cuando falta.
   - `export_payload_test.dart`: El respaldo JSON incluye el código de registro y la abreviatura.
   - `photo_compressor_test.dart`: Reducción del lado mayor, salida JPEG, respeto del tamaño en imágenes chicas y `null` ante bytes que no son una imagen.
   - `photo_storage_test.dart`: La foto se guarda comprimida, y se conserva el original cuando el archivo no es una imagen o cuando comprimir no reduce el peso.
   - `vertex_photo_clean_orphans_test.dart`: La depuración de huérfanos conserva las fotos de parcela y de vértice, y elimina solo el archivo sin registro.
+  - `vertex_photo_one_per_vertex_test.dart`: El esquema rechaza una segunda foto por vértice y agregar una nueva reemplaza a la anterior.
+  - `vertex_photo_dedupe_invariants_test.dart`: Invariantes de la deduplicación de la migración v4 (queda una sola fila por vértice).
   - `parcel_services_test.dart`: Algoritmos de cálculo de área esférica y validación geométrica de polígonos.
   - `production_math_test.dart`: Cálculos de rendimiento y factores de conversión de cosecha.
   - `widget_test.dart`: Verificación de renderizado inicial de la interfaz.
