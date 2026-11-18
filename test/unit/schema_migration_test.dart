@@ -1,0 +1,234 @@
+import 'package:catastrodemo/core/database/app_database.dart';
+import 'package:catastrodemo/features/farmers/data/drift_farmer_repository.dart';
+import 'package:catastrodemo/features/grape_varieties/data/drift_grape_variety_repository.dart';
+import 'package:catastrodemo/features/production/data/drift_production_repositories.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Migración v2 → v3 con datos reales.
+///
+/// El esquema v2 se escribe a mano y se marca con `PRAGMA user_version = 2`
+/// dentro del callback `setup`, que Drift ejecuta antes de leer la versión. Así
+/// la apertura dispara `onUpgrade(2, 3)` y el relleno de códigos se prueba
+/// contra filas concretas, no contra un esquema recién creado.
+void main() {
+  group('Migración v2 → v3', () {
+    late AppDatabase db;
+
+    setUp(() async {
+      db = AppDatabase(
+        NativeDatabase.memory(setup: (raw) {
+          raw.execute('''
+            CREATE TABLE farmers (
+              id TEXT NOT NULL PRIMARY KEY,
+              first_name TEXT NOT NULL,
+              last_name TEXT NOT NULL,
+              document_number TEXT,
+              phone TEXT,
+              email TEXT,
+              locality TEXT,
+              address TEXT,
+              notes TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE grape_varieties (
+              id TEXT NOT NULL PRIMARY KEY,
+              name TEXT NOT NULL,
+              category TEXT,
+              description TEXT,
+              aliases TEXT,
+              active INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE harvest_seasons (
+              id TEXT NOT NULL PRIMARY KEY,
+              name TEXT NOT NULL,
+              start_date INTEGER,
+              end_date INTEGER,
+              notes TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+          raw.execute('''
+            CREATE TABLE measurement_units (
+              id TEXT NOT NULL PRIMARY KEY,
+              code TEXT NOT NULL,
+              name TEXT NOT NULL,
+              kilograms_equivalent REAL,
+              active INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
+
+          // Agricultores: correlativo heredado, CI real, correlativo repetido y
+          // documento ausente.
+          raw.execute(
+            "INSERT INTO farmers VALUES ('f1','Juan','Pérez','AGR-001',NULL,NULL,"
+            'NULL,NULL,NULL,1,1)',
+          );
+          raw.execute(
+            "INSERT INTO farmers VALUES ('f2','Ana','Gómez','12345678',NULL,NULL,"
+            'NULL,NULL,NULL,2,2)',
+          );
+          raw.execute(
+            "INSERT INTO farmers VALUES ('f3','Luis','Díaz','AGR-001',NULL,NULL,"
+            'NULL,NULL,NULL,3,3)',
+          );
+          raw.execute(
+            "INSERT INTO farmers VALUES ('f4','Eva','Ruiz',NULL,NULL,NULL,"
+            'NULL,NULL,NULL,4,4)',
+          );
+
+          raw.execute(
+            "INSERT INTO grape_varieties VALUES ('v1','Malbec','Tinta',NULL,NULL,"
+            '1,1,1)',
+          );
+          raw.execute(
+            "INSERT INTO grape_varieties VALUES ('v2','Syrah','Tinta',NULL,NULL,"
+            '1,2,2)',
+          );
+
+          raw.execute(
+            "INSERT INTO harvest_seasons VALUES ('s1','2025',NULL,NULL,NULL,1,1)",
+          );
+          raw.execute(
+            "INSERT INTO harvest_seasons VALUES ('s2','2026',NULL,NULL,NULL,2,2)",
+          );
+
+          // En v2 el código de la unidad era su abreviatura.
+          raw.execute(
+            "INSERT INTO measurement_units VALUES ('u1','kg','Kilogramo',1.0,1,1,1)",
+          );
+          raw.execute(
+            "INSERT INTO measurement_units VALUES ('u2','crate','Cajón',NULL,1,2,2)",
+          );
+          raw.execute(
+            "INSERT INTO measurement_units VALUES ('u3','ton','Tonelada',1000.0,1,3,3)",
+          );
+
+          raw.execute('PRAGMA user_version = 2');
+        }),
+      );
+      // La primera consulta dispara la apertura y, con ella, la migración.
+      await db.customSelect('SELECT 1').get();
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test('sube la versión del esquema a 3', () async {
+      final row = await db.customSelect('PRAGMA user_version').getSingle();
+      expect(row.read<int>('user_version'), 3);
+    });
+
+    test('conserva la cantidad de filas de cada tabla', () async {
+      Future<int> count(String table) async {
+        final row =
+            await db.customSelect('SELECT COUNT(*) AS c FROM $table').getSingle();
+        return row.read<int>('c');
+      }
+
+      expect(await count('farmers'), 4);
+      expect(await count('grape_varieties'), 2);
+      expect(await count('harvest_seasons'), 2);
+      expect(await count('measurement_units'), 3);
+    });
+
+    test('mueve el correlativo heredado del documento al código', () async {
+      final farmers = await DriftFarmerRepository(db.farmerDao).findFarmers();
+      final byId = {for (final f in farmers) f.id: f};
+
+      expect(byId['f1']!.code, 'AGR-001');
+      expect(byId['f1']!.documentNumber, isNull);
+    });
+
+    test('conserva el documento cuando era un CI real', () async {
+      final farmers = await DriftFarmerRepository(db.farmerDao).findFarmers();
+      final byId = {for (final f in farmers) f.id: f};
+
+      expect(byId['f2']!.documentNumber, '12345678');
+      expect(byId['f2']!.code, 'AGR-002');
+    });
+
+    test('reparte un código libre cuando el heredado estaba repetido', () async {
+      final farmers = await DriftFarmerRepository(db.farmerDao).findFarmers();
+      final byId = {for (final f in farmers) f.id: f};
+
+      expect(byId['f3']!.code, 'AGR-003');
+      expect(byId['f3']!.documentNumber, isNull);
+      expect(byId['f4']!.code, 'AGR-004');
+    });
+
+    test('los códigos asignados no se repiten', () async {
+      final codes = [
+        for (final f in await DriftFarmerRepository(db.farmerDao).findFarmers())
+          f.code,
+      ];
+      expect(codes.toSet().length, codes.length);
+    });
+
+    test('el siguiente correlativo continúa la secuencia migrada', () async {
+      expect(await DriftFarmerRepository(db.farmerDao).nextCode(), 'AGR-005');
+    });
+
+    test('asigna códigos UVA- y TEM- a los catálogos migrados', () async {
+      final varieties =
+          await DriftGrapeVarietyRepository(db.grapeVarietyDao).findAll();
+      expect(
+        {for (final v in varieties) v.id: v.code},
+        {'v1': 'UVA-001', 'v2': 'UVA-002'},
+      );
+
+      final seasons =
+          await DriftHarvestSeasonRepository(db.harvestSeasonDao).findAll();
+      expect(
+        {for (final s in seasons) s.id: s.code},
+        {'s1': 'TEM-001', 's2': 'TEM-002'},
+      );
+    });
+
+    test('mueve la abreviatura de la unidad y regenera su código', () async {
+      final units =
+          await DriftMeasurementUnitRepository(db.measurementUnitDao).findAll();
+      final byId = {for (final u in units) u.id: u};
+
+      expect(byId['u1']!.abbreviation, 'kg');
+      expect(byId['u1']!.code, 'UNI-001');
+      expect(byId['u2']!.abbreviation, 'crate');
+      expect(byId['u2']!.code, 'UNI-002');
+      expect(byId['u3']!.abbreviation, 'ton');
+      expect(byId['u3']!.code, 'UNI-003');
+      expect(byId['u3']!.kilogramsEquivalent, 1000.0);
+    });
+
+    test('crea los índices únicos que faltaban en la base migrada', () async {
+      final rows = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN "
+            "('idx_farmers_code','idx_grape_varieties_code',"
+            "'idx_harvest_seasons_code','idx_measurement_units_abbreviation')",
+          )
+          .get();
+      expect(rows.length, 4);
+    });
+
+    test('el índice único rechaza un código repetido', () async {
+      await expectLater(
+        db.customStatement(
+          "INSERT INTO farmers (id, code, first_name, last_name, created_at, "
+          "updated_at) VALUES ('f9','AGR-001','Otro','Apellido',9,9)",
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+}

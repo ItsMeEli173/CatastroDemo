@@ -3,10 +3,10 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/parcel_dao.dart';
 import '../../../../core/database/daos/parcel_vertex_dao.dart';
+import '../../../../core/database/registration_code.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/geo/geo_point.dart';
 import '../../../../core/storage/photo_storage.dart';
-import '../../../../core/validation/validators.dart';
 import '../domain/entities/parcel.dart';
 import '../domain/repositories/parcel_repository.dart';
 import '../domain/services/polygon_validator.dart';
@@ -69,39 +69,38 @@ class DriftParcelRepository implements ParcelRepository {
 
   @override
   Future<String> nextCode() async {
-    final total = await _parcelDao.count();
-    var candidateNum = total + 1;
-    while (true) {
-      final code = 'PAR-${candidateNum.toString().padLeft(3, '0')}';
-      final existing = await _parcelDao.findByCode(code);
-      if (existing == null) return code;
-      candidateNum++;
+    final used = <String>{};
+    for (final row in await _parcelDao.findAll()) {
+      used.add(row.code);
     }
+    return RegistrationCode.next('PAR-', used);
+  }
+
+  /// Resuelve el código que se guardará (ver [DriftFarmerRepository]).
+  Future<String> _resolveCode(Parcel parcel) async {
+    final provided = parcel.code.trim();
+    if (provided.isNotEmpty) {
+      final owner = await _parcelDao.findByCode(provided);
+      if (owner == null || owner.id == parcel.id) return provided;
+    }
+    final current = (await _parcelDao.findById(parcel.id))?.code.trim() ?? '';
+    return current.isNotEmpty ? current : nextCode();
   }
 
   @override
   Future<void> save(Parcel parcel) async {
-    final codeError = Validators.requiredCode(
-      parcel.code,
-      message: 'Ingresa el código de la parcela.',
-      maxLength: 40,
-    );
-    if (codeError != null) throw ValidationFailure(codeError);
     final declaredArea = parcel.declaredAreaM2;
     if (declaredArea != null && (!declaredArea.isFinite || declaredArea < 0)) {
       throw const ValidationFailure(
         'La superficie declarada debe ser un número mayor o igual a cero.',
       );
     }
-    final duplicate = await _parcelDao.findByCode(parcel.code);
-    if (duplicate != null && duplicate.id != parcel.id) {
-      throw const ValidationFailure('Ya existe una parcela con ese código.');
-    }
+    final code = await _resolveCode(parcel);
     try {
       await _parcelDao.upsert(
         ParcelsCompanion(
           id: Value(parcel.id),
-          code: Value(parcel.code.trim()),
+          code: Value(code),
           name: Value(_clean(parcel.name)),
           declaredAreaM2: Value(parcel.declaredAreaM2),
           calculatedAreaM2: Value(parcel.calculatedAreaM2),

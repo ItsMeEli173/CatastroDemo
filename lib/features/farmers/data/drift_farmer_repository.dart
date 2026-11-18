@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/farmer_dao.dart';
+import '../../../../core/database/registration_code.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
 import '../domain/entities/farmer.dart';
@@ -34,17 +35,24 @@ class DriftFarmerRepository implements FarmerRepository {
   Stream<int> watchCount() => _dao.watchCount();
 
   @override
-  Future<String> nextCode() async {
-    final total = await _dao.count();
-    var candidateNum = total + 1;
-    while (true) {
-      final code = 'AGR-${candidateNum.toString().padLeft(3, '0')}';
-      final existing = await _dao.findAll(query: code);
-      if (existing.every((f) => f.documentNumber != code)) {
-        return code;
-      }
-      candidateNum++;
+  Future<String> nextCode() async =>
+      RegistrationCode.next('AGR-', (await _dao.allCodes()).toSet());
+
+  /// Resuelve el código que se guardará.
+  ///
+  /// El repositorio es la autoridad: conserva el código de un registro que ya
+  /// lo tiene y asigna uno libre cuando el registro es nuevo o cuando el valor
+  /// recibido ya pertenece a otro agricultor. Así el sistema garantiza que no
+  /// existan conflictos aunque dos formularios se abran a la vez.
+  Future<String> _resolveCode(Farmer farmer) async {
+    final provided = farmer.code?.trim() ?? '';
+    if (provided.isNotEmpty) {
+      final owner = await _dao.findByCode(provided);
+      if (owner == null || owner.id == farmer.id) return provided;
     }
+    // Sin código utilizable: si el registro ya existe, conserva el suyo.
+    final current = (await _dao.findById(farmer.id))?.code?.trim() ?? '';
+    return current.isNotEmpty ? current : nextCode();
   }
 
   @override
@@ -64,10 +72,13 @@ class DriftFarmerRepository implements FarmerRepository {
     final phoneError = Validators.optionalPhone(farmer.phone);
     if (phoneError != null) throw ValidationFailure(phoneError);
 
+    final code = await _resolveCode(farmer);
+
     try {
       await _dao.upsert(
         FarmersCompanion(
           id: Value(farmer.id),
+          code: Value(code),
           firstName: Value(Validators.normalizePersonName(farmer.firstName)),
           lastName: Value(Validators.normalizePersonName(farmer.lastName)),
           documentNumber: Value(_clean(farmer.documentNumber)),
@@ -115,6 +126,7 @@ class DriftFarmerRepository implements FarmerRepository {
 extension FarmerRowMapper on FarmerRow {
   Farmer toFarmerEntity() => Farmer(
         id: id,
+        code: code,
         firstName: firstName,
         lastName: lastName,
         documentNumber: documentNumber,
