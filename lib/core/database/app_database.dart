@@ -45,7 +45,7 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  static const int currentSchemaVersion = 3;
+  static const int currentSchemaVersion = 4;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -92,6 +92,19 @@ class AppDatabase extends _$AppDatabase {
               'CREATE UNIQUE INDEX IF NOT EXISTS '
               'idx_measurement_units_abbreviation '
               'ON measurement_units (abbreviation)',
+            );
+          }
+          if (from < 4) {
+            // Un vértice pasa a tener a lo sumo una fotografía: primero se
+            // depuran los duplicados históricos y recién después se crea el
+            // índice único, que fallaría con duplicados presentes.
+            await _dedupeVertexPhotos();
+            await customStatement(
+              'DROP INDEX IF EXISTS idx_vertex_photos_vertex',
+            );
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_vertex_photos_vertex '
+              'ON vertex_photos (vertex_id)',
             );
           }
         },
@@ -194,6 +207,23 @@ class AppDatabase extends _$AppDatabase {
       used.add(code);
       await write(id, code);
     }
+  }
+
+  /// Deja una sola fotografía por vértice antes de crear el índice único.
+  ///
+  /// Conserva la más antigua —el mismo criterio de `findByVertex`, que ordena
+  /// por `created_at` ASC, es decir la que la interfaz ya mostraba— y elimina
+  /// el resto de filas. Los archivos de las filas eliminadas quedan huérfanos y
+  /// se depuran desde mantenimiento (RN-30 y RN-35).
+  Future<void> _dedupeVertexPhotos() async {
+    await customStatement(
+      'DELETE FROM vertex_photos WHERE id NOT IN ('
+      'SELECT keep.id FROM vertex_photos AS keep WHERE NOT EXISTS ('
+      'SELECT 1 FROM vertex_photos AS other '
+      'WHERE other.vertex_id = keep.vertex_id AND ('
+      'other.created_at < keep.created_at '
+      'OR (other.created_at = keep.created_at AND other.id < keep.id))))',
+    );
   }
 
   /// Semillas editables documentadas en la Fase 0.

@@ -133,9 +133,11 @@ class ParcelVertices extends Table {
 }
 
 @DataClassName('VertexPhotoRow')
-@TableIndex(name: 'idx_vertex_photos_vertex', columns: {#vertexId})
+@TableIndex(name: 'idx_vertex_photos_vertex', columns: {#vertexId}, unique: true)
 class VertexPhotos extends Table {
   TextColumn get id => text()();
+
+  /// Cada vértice tiene a lo sumo una fotografía; el índice único lo impone.
   TextColumn get vertexId =>
       text().references(ParcelVertices, #id, onDelete: KeyAction.cascade)();
   TextColumn get relativePath => text()();
