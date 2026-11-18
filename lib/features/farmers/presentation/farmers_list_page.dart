@@ -95,6 +95,7 @@ class _FarmerTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final details = [
+      if (farmer.code != null) farmer.code!,
       if (farmer.documentNumber != null) 'CI ${farmer.documentNumber}',
       if (farmer.locality != null) farmer.locality!,
       if (farmer.phone != null) farmer.phone!,

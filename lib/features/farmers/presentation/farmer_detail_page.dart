@@ -73,6 +73,11 @@ class _FarmerBody extends ConsumerWidget {
           child: Column(
             children: [
               DetailRow(
+                label: 'Código',
+                value: farmer.code ?? '—',
+                icon: Icons.qr_code_2_outlined,
+              ),
+              DetailRow(
                 label: 'Documento',
                 value: farmer.documentNumber ?? '—',
                 icon: Icons.badge_outlined,

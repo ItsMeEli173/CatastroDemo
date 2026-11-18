@@ -24,7 +24,13 @@ class LocalExportService implements ExportService {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   static const String format = 'catastrodemo';
-  static const int schemaVersion = 1;
+
+  /// Versión del formato de respaldo.
+  ///
+  /// v2 agrega el código de registro (`code`) de agricultores, variedades y
+  /// temporadas, y la abreviatura (`abbreviation`) de las unidades. Es un
+  /// cambio aditivo: un lector de v1 sigue pudiendo leer el resto.
+  static const int schemaVersion = 2;
 
   @override
   Future<ExportArtifact> exportJson() async {
@@ -147,6 +153,7 @@ class LocalExportService implements ExportService {
           for (final row in snapshot.farmers)
             {
               'id': row.id,
+              'code': row.code,
               'firstName': row.firstName,
               'lastName': row.lastName,
               'documentNumber': row.documentNumber,
@@ -216,6 +223,7 @@ class LocalExportService implements ExportService {
           for (final row in snapshot.grapeVarieties)
             {
               'id': row.id,
+              'code': row.code,
               'name': row.name,
               'category': row.category,
               'description': row.description,
@@ -241,6 +249,7 @@ class LocalExportService implements ExportService {
           for (final row in snapshot.harvestSeasons)
             {
               'id': row.id,
+              'code': row.code,
               'name': row.name,
               'startDate': _iso(row.startDate),
               'endDate': _iso(row.endDate),
@@ -254,6 +263,7 @@ class LocalExportService implements ExportService {
             {
               'id': row.id,
               'code': row.code,
+              'abbreviation': row.abbreviation,
               'name': row.name,
               'kilogramsEquivalent': row.kilogramsEquivalent,
               'active': row.active,

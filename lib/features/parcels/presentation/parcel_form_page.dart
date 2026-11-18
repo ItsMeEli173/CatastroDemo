@@ -268,15 +268,12 @@ class _ParcelFormState extends ConsumerState<_ParcelForm> {
                 children: [
                   TextFormField(
                     controller: _code,
+                    readOnly: true,
+                    canRequestFocus: false,
                     decoration: const InputDecoration(
-                      labelText: 'Código *',
-                      helperText: 'Código correlativo autogenerado',
-                    ),
-                    textCapitalization: TextCapitalization.characters,
-                    validator: (value) => Validators.requiredCode(
-                      value,
-                      message: 'Ingresa el código de la parcela.',
-                      maxLength: 40,
+                      labelText: 'Código',
+                      helperText: 'Asignado por el sistema',
+                      prefixIcon: Icon(Icons.lock_outline),
                     ),
                   ),
                   const SizedBox(height: 12),

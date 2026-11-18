@@ -12,6 +12,7 @@ import 'daos/production_daos.dart';
 import 'daos/vertex_photo_dao.dart';
 import '../../features/parcels/domain/entities/parcel.dart';
 import '../../features/parcels/domain/entities/parcel_vertex.dart';
+import 'registration_code.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
@@ -44,10 +45,14 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  static const int currentSchemaVersion = 2;
+  static const int currentSchemaVersion = 3;
 
   @override
   int get schemaVersion => currentSchemaVersion;
+
+  /// Patrón del correlativo heredado que quedó guardado en `document_number`
+  /// antes de la versión 3 del esquema.
+  static final RegExp _legacyFarmerCode = RegExp(r'^AGR-\d+$');
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -59,6 +64,36 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await migrator.addColumn(parcels, parcels.imagePath);
           }
+          if (from < 3) {
+            await migrator.addColumn(farmers, farmers.code);
+            await migrator.addColumn(grapeVarieties, grapeVarieties.code);
+            await migrator.addColumn(harvestSeasons, harvestSeasons.code);
+            await migrator.addColumn(
+              measurementUnits,
+              measurementUnits.abbreviation,
+            );
+            await _backfillRegistrationCodes();
+            // Los registros creados desde cero ya traen estas restricciones por
+            // `uniqueKeys`; las bases migradas las reciben aquí para que ambas
+            // rutas terminen con el mismo comportamiento.
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_farmers_code '
+              'ON farmers (code)',
+            );
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_grape_varieties_code '
+              'ON grape_varieties (code)',
+            );
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_harvest_seasons_code '
+              'ON harvest_seasons (code)',
+            );
+            await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS '
+              'idx_measurement_units_abbreviation '
+              'ON measurement_units (abbreviation)',
+            );
+          }
         },
         beforeOpen: (details) async {
           // SQLite no aplica claves foráneas si la PRAGMA está desactivada.
@@ -66,16 +101,114 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
+  /// Rellena los códigos de registro de los datos anteriores a la versión 3.
+  ///
+  /// Antes de esta versión el correlativo del agricultor vivía dentro de
+  /// `document_number` y el código de la unidad de medida guardaba su
+  /// abreviatura. La migración separa ambas cosas: copia el correlativo a
+  /// `code` y vacía el documento, y copia la abreviatura a su columna propia
+  /// antes de regenerar el correlativo `UNI-###`.
+  Future<void> _backfillRegistrationCodes() async {
+    await _backfillFarmerCodes();
+    await _backfillMeasurementUnitCodes();
+    await _assignNewCodes(
+      prefix: 'UVA-',
+      ids: await _idsByCreation(grapeVarieties),
+      write: (id, code) => (update(grapeVarieties)
+            ..where((t) => t.id.equals(id)))
+          .write(GrapeVarietiesCompanion(code: Value(code))),
+    );
+    await _assignNewCodes(
+      prefix: 'TEM-',
+      ids: await _idsByCreation(harvestSeasons),
+      write: (id, code) => (update(harvestSeasons)
+            ..where((t) => t.id.equals(id)))
+          .write(HarvestSeasonsCompanion(code: Value(code))),
+    );
+  }
+
+  Future<void> _backfillFarmerCodes() async {
+    final rows = await (select(farmers)
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.createdAt),
+            (t) => OrderingTerm.asc(t.id),
+          ]))
+        .get();
+    final used = <String>{};
+    for (final row in rows) {
+      final legacy = row.documentNumber?.trim() ?? '';
+      final looksLikeCode = _legacyFarmerCode.hasMatch(legacy);
+      // El correlativo heredado se conserva tal cual; si estaba repetido o
+      // ausente, el sistema asigna uno libre.
+      final reusesLegacy = looksLikeCode && used.add(legacy);
+      final code = reusesLegacy ? legacy : RegistrationCode.next('AGR-', used);
+      if (!reusesLegacy) used.add(code);
+      await (update(farmers)..where((t) => t.id.equals(row.id))).write(
+        FarmersCompanion(
+          code: Value(code),
+          // Un documento con forma de correlativo nunca fue un CI real.
+          documentNumber: Value(looksLikeCode ? null : row.documentNumber),
+        ),
+      );
+    }
+  }
+
+  Future<void> _backfillMeasurementUnitCodes() async {
+    final rows = await (select(measurementUnits)
+          ..orderBy([
+            (t) => OrderingTerm.asc(t.createdAt),
+            (t) => OrderingTerm.asc(t.id),
+          ]))
+        .get();
+    final used = <String>{};
+    for (final row in rows) {
+      final previous = row.abbreviation?.trim() ?? '';
+      final code = RegistrationCode.next('UNI-', used);
+      used.add(code);
+      await (update(measurementUnits)..where((t) => t.id.equals(row.id)))
+          .write(
+        MeasurementUnitsCompanion(
+          code: Value(code),
+          abbreviation: Value(previous.isEmpty ? row.code.trim() : previous),
+        ),
+      );
+    }
+  }
+
+  Future<List<String>> _idsByCreation(TableInfo<Table, dynamic> table) async {
+    final rows = await customSelect(
+      'SELECT id FROM ${table.actualTableName} ORDER BY created_at ASC, id ASC',
+      readsFrom: {table},
+    ).get();
+    return [for (final row in rows) row.read<String>('id')];
+  }
+
+  Future<void> _assignNewCodes({
+    required String prefix,
+    required List<String> ids,
+    required Future<void> Function(String id, String code) write,
+  }) async {
+    final used = <String>{};
+    for (final id in ids) {
+      final code = RegistrationCode.next(prefix, used);
+      used.add(code);
+      await write(id, code);
+    }
+  }
+
   /// Semillas editables documentadas en la Fase 0.
   Future<void> _seedCatalogs() async {
     const uuid = Uuid();
     final now = DateTime.now().toUtc();
+    var varietyNumber = 0;
+    var unitNumber = 0;
 
     await batch((batch) {
       batch.insertAll(grapeVarieties, [
         for (final seed in _varietySeeds)
           GrapeVarietiesCompanion.insert(
             id: uuid.v4(),
+            code: Value(RegistrationCode.format('UVA-', ++varietyNumber)),
             name: seed.name,
             category: Value(seed.category),
             active: const Value(true),
@@ -87,7 +220,8 @@ class AppDatabase extends _$AppDatabase {
         for (final seed in _unitSeeds)
           MeasurementUnitsCompanion.insert(
             id: uuid.v4(),
-            code: seed.code,
+            code: RegistrationCode.format('UNI-', ++unitNumber),
+            abbreviation: Value(seed.abbreviation),
             name: seed.name,
             kilogramsEquivalent: Value(seed.kilogramsEquivalent),
             active: const Value(true),
@@ -107,9 +241,10 @@ class _VarietySeed {
 }
 
 class _UnitSeed {
-  const _UnitSeed(this.code, this.name, this.kilogramsEquivalent);
+  const _UnitSeed(this.abbreviation, this.name, this.kilogramsEquivalent);
 
-  final String code;
+  /// Abreviatura visible (`kg`, `crate`, `ton`); su código lo asigna el sistema.
+  final String abbreviation;
   final String name;
   final double? kilogramsEquivalent;
 }

@@ -16,6 +16,10 @@ class FarmerDao extends DatabaseAccessor<AppDatabase> with _$FarmerDaoMixin {
     final pattern = likeContains(query);
     return farmers.firstName.lower().like(pattern, escapeChar: '\\') |
         farmers.lastName.lower().like(pattern, escapeChar: '\\') |
+        farmers.code
+            .cast<String>()
+            .lower()
+            .like(pattern, escapeChar: '\\') |
         farmers.documentNumber
             .cast<String>()
             .lower()
@@ -46,6 +50,19 @@ class FarmerDao extends DatabaseAccessor<AppDatabase> with _$FarmerDaoMixin {
 
   Future<FarmerRow?> findById(String id) =>
       (select(farmers)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<FarmerRow?> findByCode(String code) =>
+      (select(farmers)..where((t) => t.code.equals(code.trim())))
+          .getSingleOrNull();
+
+  /// Códigos de registro ya asignados, para no repetirlos.
+  Future<List<String>> allCodes() async {
+    final query = selectOnly(farmers)
+      ..addColumns([farmers.code])
+      ..where(farmers.code.isNotNull());
+    final rows = await query.get();
+    return [for (final row in rows) ?row.read(farmers.code)];
+  }
 
   Stream<int> watchCount() {
     final countExpression = farmers.id.count();

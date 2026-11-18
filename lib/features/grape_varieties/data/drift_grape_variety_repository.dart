@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/grape_variety_dao.dart';
+import '../../../../core/database/registration_code.dart';
 import '../../../../core/errors/app_failure.dart';
 import '../../../../core/validation/validators.dart';
 import '../domain/entities/grape_variety.dart';
@@ -38,6 +39,21 @@ class DriftGrapeVarietyRepository implements GrapeVarietyRepository {
   }
 
   @override
+  Future<String> nextCode() async =>
+      RegistrationCode.next('UVA-', (await _dao.allCodes()).toSet());
+
+  /// Resuelve el código que se guardará (ver [DriftFarmerRepository]).
+  Future<String> _resolveCode(GrapeVariety variety) async {
+    final provided = variety.code?.trim() ?? '';
+    if (provided.isNotEmpty) {
+      final owner = await _dao.findByCode(provided);
+      if (owner == null || owner.id == variety.id) return provided;
+    }
+    final current = (await _dao.findById(variety.id))?.code?.trim() ?? '';
+    return current.isNotEmpty ? current : nextCode();
+  }
+
+  @override
   Future<void> save(GrapeVariety variety) async {
     final nameError = Validators.requiredText(
       variety.name,
@@ -49,10 +65,12 @@ class DriftGrapeVarietyRepository implements GrapeVarietyRepository {
     if (duplicate != null && duplicate.id != variety.id) {
       throw const ValidationFailure('Ya existe una variedad con ese nombre.');
     }
+    final code = await _resolveCode(variety);
     try {
       await _dao.upsert(
         GrapeVarietiesCompanion(
           id: Value(variety.id),
+          code: Value(code),
           name: Value(variety.name.trim()),
           category: Value(_clean(variety.category)),
           description: Value(_clean(variety.description)),
@@ -97,6 +115,7 @@ class DriftGrapeVarietyRepository implements GrapeVarietyRepository {
 extension GrapeVarietyRowMapper on GrapeVarietyRow {
   GrapeVariety toVarietyEntity() => GrapeVariety(
         id: id,
+        code: code,
         name: name,
         category: category,
         description: description,

@@ -17,6 +17,15 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _firstNameMeta = const VerificationMeta(
     'firstName',
   );
@@ -132,6 +141,7 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    code,
     firstName,
     lastName,
     documentNumber,
@@ -159,6 +169,12 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
     }
     if (data.containsKey('first_name')) {
       context.handle(
@@ -237,6 +253,10 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {code},
+  ];
+  @override
   FarmerRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return FarmerRow(
@@ -244,6 +264,10 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
       firstName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}first_name'],
@@ -295,6 +319,12 @@ class $FarmersTable extends Farmers with TableInfo<$FarmersTable, FarmerRow> {
 
 class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`AGR-###`).
+  ///
+  /// Es anulable solo por la migración que rellena los registros anteriores a
+  /// la versión 3; el repositorio siempre escribe un valor.
+  final String? code;
   final String firstName;
   final String lastName;
   final String? documentNumber;
@@ -307,6 +337,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   final DateTime updatedAt;
   const FarmerRow({
     required this.id,
+    this.code,
     required this.firstName,
     required this.lastName,
     this.documentNumber,
@@ -322,6 +353,9 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     map['first_name'] = Variable<String>(firstName);
     map['last_name'] = Variable<String>(lastName);
     if (!nullToAbsent || documentNumber != null) {
@@ -350,6 +384,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   FarmersCompanion toCompanion(bool nullToAbsent) {
     return FarmersCompanion(
       id: Value(id),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
       firstName: Value(firstName),
       lastName: Value(lastName),
       documentNumber: documentNumber == null && nullToAbsent
@@ -382,6 +417,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return FarmerRow(
       id: serializer.fromJson<String>(json['id']),
+      code: serializer.fromJson<String?>(json['code']),
       firstName: serializer.fromJson<String>(json['firstName']),
       lastName: serializer.fromJson<String>(json['lastName']),
       documentNumber: serializer.fromJson<String?>(json['documentNumber']),
@@ -399,6 +435,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'code': serializer.toJson<String?>(code),
       'firstName': serializer.toJson<String>(firstName),
       'lastName': serializer.toJson<String>(lastName),
       'documentNumber': serializer.toJson<String?>(documentNumber),
@@ -414,6 +451,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
 
   FarmerRow copyWith({
     String? id,
+    Value<String?> code = const Value.absent(),
     String? firstName,
     String? lastName,
     Value<String?> documentNumber = const Value.absent(),
@@ -426,6 +464,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
     DateTime? updatedAt,
   }) => FarmerRow(
     id: id ?? this.id,
+    code: code.present ? code.value : this.code,
     firstName: firstName ?? this.firstName,
     lastName: lastName ?? this.lastName,
     documentNumber: documentNumber.present
@@ -442,6 +481,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   FarmerRow copyWithCompanion(FarmersCompanion data) {
     return FarmerRow(
       id: data.id.present ? data.id.value : this.id,
+      code: data.code.present ? data.code.value : this.code,
       firstName: data.firstName.present ? data.firstName.value : this.firstName,
       lastName: data.lastName.present ? data.lastName.value : this.lastName,
       documentNumber: data.documentNumber.present
@@ -461,6 +501,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   String toString() {
     return (StringBuffer('FarmerRow(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('firstName: $firstName, ')
           ..write('lastName: $lastName, ')
           ..write('documentNumber: $documentNumber, ')
@@ -478,6 +519,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
   @override
   int get hashCode => Object.hash(
     id,
+    code,
     firstName,
     lastName,
     documentNumber,
@@ -494,6 +536,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
       identical(this, other) ||
       (other is FarmerRow &&
           other.id == this.id &&
+          other.code == this.code &&
           other.firstName == this.firstName &&
           other.lastName == this.lastName &&
           other.documentNumber == this.documentNumber &&
@@ -508,6 +551,7 @@ class FarmerRow extends DataClass implements Insertable<FarmerRow> {
 
 class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   final Value<String> id;
+  final Value<String?> code;
   final Value<String> firstName;
   final Value<String> lastName;
   final Value<String?> documentNumber;
@@ -521,6 +565,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   final Value<int> rowid;
   const FarmersCompanion({
     this.id = const Value.absent(),
+    this.code = const Value.absent(),
     this.firstName = const Value.absent(),
     this.lastName = const Value.absent(),
     this.documentNumber = const Value.absent(),
@@ -535,6 +580,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   });
   FarmersCompanion.insert({
     required String id,
+    this.code = const Value.absent(),
     required String firstName,
     required String lastName,
     this.documentNumber = const Value.absent(),
@@ -553,6 +599,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
        updatedAt = Value(updatedAt);
   static Insertable<FarmerRow> custom({
     Expression<String>? id,
+    Expression<String>? code,
     Expression<String>? firstName,
     Expression<String>? lastName,
     Expression<String>? documentNumber,
@@ -567,6 +614,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (code != null) 'code': code,
       if (firstName != null) 'first_name': firstName,
       if (lastName != null) 'last_name': lastName,
       if (documentNumber != null) 'document_number': documentNumber,
@@ -583,6 +631,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
 
   FarmersCompanion copyWith({
     Value<String>? id,
+    Value<String?>? code,
     Value<String>? firstName,
     Value<String>? lastName,
     Value<String?>? documentNumber,
@@ -597,6 +646,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   }) {
     return FarmersCompanion(
       id: id ?? this.id,
+      code: code ?? this.code,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       documentNumber: documentNumber ?? this.documentNumber,
@@ -616,6 +666,9 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
     }
     if (firstName.present) {
       map['first_name'] = Variable<String>(firstName.value);
@@ -657,6 +710,7 @@ class FarmersCompanion extends UpdateCompanion<FarmerRow> {
   String toString() {
     return (StringBuffer('FarmersCompanion(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('firstName: $firstName, ')
           ..write('lastName: $lastName, ')
           ..write('documentNumber: $documentNumber, ')
@@ -2863,6 +2917,15 @@ class $GrapeVarietiesTable extends GrapeVarieties
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -2947,6 +3010,7 @@ class $GrapeVarietiesTable extends GrapeVarieties
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    code,
     name,
     category,
     description,
@@ -2971,6 +3035,12 @@ class $GrapeVarietiesTable extends GrapeVarieties
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -3031,6 +3101,7 @@ class $GrapeVarietiesTable extends GrapeVarieties
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {name},
+    {code},
   ];
   @override
   GrapeVarietyRow map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -3040,6 +3111,10 @@ class $GrapeVarietiesTable extends GrapeVarieties
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -3079,6 +3154,9 @@ class $GrapeVarietiesTable extends GrapeVarieties
 
 class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`UVA-###`).
+  final String? code;
   final String name;
   final String? category;
   final String? description;
@@ -3088,6 +3166,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   final DateTime updatedAt;
   const GrapeVarietyRow({
     required this.id,
+    this.code,
     required this.name,
     this.category,
     this.description,
@@ -3100,6 +3179,9 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || category != null) {
       map['category'] = Variable<String>(category);
@@ -3119,6 +3201,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   GrapeVarietiesCompanion toCompanion(bool nullToAbsent) {
     return GrapeVarietiesCompanion(
       id: Value(id),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
       name: Value(name),
       category: category == null && nullToAbsent
           ? const Value.absent()
@@ -3142,6 +3225,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return GrapeVarietyRow(
       id: serializer.fromJson<String>(json['id']),
+      code: serializer.fromJson<String?>(json['code']),
       name: serializer.fromJson<String>(json['name']),
       category: serializer.fromJson<String?>(json['category']),
       description: serializer.fromJson<String?>(json['description']),
@@ -3156,6 +3240,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'code': serializer.toJson<String?>(code),
       'name': serializer.toJson<String>(name),
       'category': serializer.toJson<String?>(category),
       'description': serializer.toJson<String?>(description),
@@ -3168,6 +3253,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
 
   GrapeVarietyRow copyWith({
     String? id,
+    Value<String?> code = const Value.absent(),
     String? name,
     Value<String?> category = const Value.absent(),
     Value<String?> description = const Value.absent(),
@@ -3177,6 +3263,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
     DateTime? updatedAt,
   }) => GrapeVarietyRow(
     id: id ?? this.id,
+    code: code.present ? code.value : this.code,
     name: name ?? this.name,
     category: category.present ? category.value : this.category,
     description: description.present ? description.value : this.description,
@@ -3188,6 +3275,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   GrapeVarietyRow copyWithCompanion(GrapeVarietiesCompanion data) {
     return GrapeVarietyRow(
       id: data.id.present ? data.id.value : this.id,
+      code: data.code.present ? data.code.value : this.code,
       name: data.name.present ? data.name.value : this.name,
       category: data.category.present ? data.category.value : this.category,
       description: data.description.present
@@ -3204,6 +3292,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   String toString() {
     return (StringBuffer('GrapeVarietyRow(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('name: $name, ')
           ..write('category: $category, ')
           ..write('description: $description, ')
@@ -3218,6 +3307,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
   @override
   int get hashCode => Object.hash(
     id,
+    code,
     name,
     category,
     description,
@@ -3231,6 +3321,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
       identical(this, other) ||
       (other is GrapeVarietyRow &&
           other.id == this.id &&
+          other.code == this.code &&
           other.name == this.name &&
           other.category == this.category &&
           other.description == this.description &&
@@ -3242,6 +3333,7 @@ class GrapeVarietyRow extends DataClass implements Insertable<GrapeVarietyRow> {
 
 class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   final Value<String> id;
+  final Value<String?> code;
   final Value<String> name;
   final Value<String?> category;
   final Value<String?> description;
@@ -3252,6 +3344,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   final Value<int> rowid;
   const GrapeVarietiesCompanion({
     this.id = const Value.absent(),
+    this.code = const Value.absent(),
     this.name = const Value.absent(),
     this.category = const Value.absent(),
     this.description = const Value.absent(),
@@ -3263,6 +3356,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   });
   GrapeVarietiesCompanion.insert({
     required String id,
+    this.code = const Value.absent(),
     required String name,
     this.category = const Value.absent(),
     this.description = const Value.absent(),
@@ -3277,6 +3371,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
        updatedAt = Value(updatedAt);
   static Insertable<GrapeVarietyRow> custom({
     Expression<String>? id,
+    Expression<String>? code,
     Expression<String>? name,
     Expression<String>? category,
     Expression<String>? description,
@@ -3288,6 +3383,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (code != null) 'code': code,
       if (name != null) 'name': name,
       if (category != null) 'category': category,
       if (description != null) 'description': description,
@@ -3301,6 +3397,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
 
   GrapeVarietiesCompanion copyWith({
     Value<String>? id,
+    Value<String?>? code,
     Value<String>? name,
     Value<String?>? category,
     Value<String?>? description,
@@ -3312,6 +3409,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   }) {
     return GrapeVarietiesCompanion(
       id: id ?? this.id,
+      code: code ?? this.code,
       name: name ?? this.name,
       category: category ?? this.category,
       description: description ?? this.description,
@@ -3328,6 +3426,9 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -3360,6 +3461,7 @@ class GrapeVarietiesCompanion extends UpdateCompanion<GrapeVarietyRow> {
   String toString() {
     return (StringBuffer('GrapeVarietiesCompanion(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('name: $name, ')
           ..write('category: $category, ')
           ..write('description: $description, ')
@@ -3883,6 +3985,15 @@ class $HarvestSeasonsTable extends HarvestSeasons
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -3952,6 +4063,7 @@ class $HarvestSeasonsTable extends HarvestSeasons
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    code,
     name,
     startDate,
     endDate,
@@ -3975,6 +4087,12 @@ class $HarvestSeasonsTable extends HarvestSeasons
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -4026,6 +4144,7 @@ class $HarvestSeasonsTable extends HarvestSeasons
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {name},
+    {code},
   ];
   @override
   HarvestSeasonRow map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -4035,6 +4154,10 @@ class $HarvestSeasonsTable extends HarvestSeasons
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -4071,6 +4194,9 @@ class $HarvestSeasonsTable extends HarvestSeasons
 class HarvestSeasonRow extends DataClass
     implements Insertable<HarvestSeasonRow> {
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`TEM-###`).
+  final String? code;
   final String name;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -4079,6 +4205,7 @@ class HarvestSeasonRow extends DataClass
   final DateTime updatedAt;
   const HarvestSeasonRow({
     required this.id,
+    this.code,
     required this.name,
     this.startDate,
     this.endDate,
@@ -4090,6 +4217,9 @@ class HarvestSeasonRow extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || code != null) {
+      map['code'] = Variable<String>(code);
+    }
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || startDate != null) {
       map['start_date'] = Variable<DateTime>(startDate);
@@ -4108,6 +4238,7 @@ class HarvestSeasonRow extends DataClass
   HarvestSeasonsCompanion toCompanion(bool nullToAbsent) {
     return HarvestSeasonsCompanion(
       id: Value(id),
+      code: code == null && nullToAbsent ? const Value.absent() : Value(code),
       name: Value(name),
       startDate: startDate == null && nullToAbsent
           ? const Value.absent()
@@ -4130,6 +4261,7 @@ class HarvestSeasonRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return HarvestSeasonRow(
       id: serializer.fromJson<String>(json['id']),
+      code: serializer.fromJson<String?>(json['code']),
       name: serializer.fromJson<String>(json['name']),
       startDate: serializer.fromJson<DateTime?>(json['startDate']),
       endDate: serializer.fromJson<DateTime?>(json['endDate']),
@@ -4143,6 +4275,7 @@ class HarvestSeasonRow extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'code': serializer.toJson<String?>(code),
       'name': serializer.toJson<String>(name),
       'startDate': serializer.toJson<DateTime?>(startDate),
       'endDate': serializer.toJson<DateTime?>(endDate),
@@ -4154,6 +4287,7 @@ class HarvestSeasonRow extends DataClass
 
   HarvestSeasonRow copyWith({
     String? id,
+    Value<String?> code = const Value.absent(),
     String? name,
     Value<DateTime?> startDate = const Value.absent(),
     Value<DateTime?> endDate = const Value.absent(),
@@ -4162,6 +4296,7 @@ class HarvestSeasonRow extends DataClass
     DateTime? updatedAt,
   }) => HarvestSeasonRow(
     id: id ?? this.id,
+    code: code.present ? code.value : this.code,
     name: name ?? this.name,
     startDate: startDate.present ? startDate.value : this.startDate,
     endDate: endDate.present ? endDate.value : this.endDate,
@@ -4172,6 +4307,7 @@ class HarvestSeasonRow extends DataClass
   HarvestSeasonRow copyWithCompanion(HarvestSeasonsCompanion data) {
     return HarvestSeasonRow(
       id: data.id.present ? data.id.value : this.id,
+      code: data.code.present ? data.code.value : this.code,
       name: data.name.present ? data.name.value : this.name,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
       endDate: data.endDate.present ? data.endDate.value : this.endDate,
@@ -4185,6 +4321,7 @@ class HarvestSeasonRow extends DataClass
   String toString() {
     return (StringBuffer('HarvestSeasonRow(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('name: $name, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -4196,13 +4333,22 @@ class HarvestSeasonRow extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, startDate, endDate, notes, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    id,
+    code,
+    name,
+    startDate,
+    endDate,
+    notes,
+    createdAt,
+    updatedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is HarvestSeasonRow &&
           other.id == this.id &&
+          other.code == this.code &&
           other.name == this.name &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
@@ -4213,6 +4359,7 @@ class HarvestSeasonRow extends DataClass
 
 class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   final Value<String> id;
+  final Value<String?> code;
   final Value<String> name;
   final Value<DateTime?> startDate;
   final Value<DateTime?> endDate;
@@ -4222,6 +4369,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   final Value<int> rowid;
   const HarvestSeasonsCompanion({
     this.id = const Value.absent(),
+    this.code = const Value.absent(),
     this.name = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
@@ -4232,6 +4380,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   });
   HarvestSeasonsCompanion.insert({
     required String id,
+    this.code = const Value.absent(),
     required String name,
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
@@ -4245,6 +4394,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
        updatedAt = Value(updatedAt);
   static Insertable<HarvestSeasonRow> custom({
     Expression<String>? id,
+    Expression<String>? code,
     Expression<String>? name,
     Expression<DateTime>? startDate,
     Expression<DateTime>? endDate,
@@ -4255,6 +4405,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (code != null) 'code': code,
       if (name != null) 'name': name,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
@@ -4267,6 +4418,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
 
   HarvestSeasonsCompanion copyWith({
     Value<String>? id,
+    Value<String?>? code,
     Value<String>? name,
     Value<DateTime?>? startDate,
     Value<DateTime?>? endDate,
@@ -4277,6 +4429,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   }) {
     return HarvestSeasonsCompanion(
       id: id ?? this.id,
+      code: code ?? this.code,
       name: name ?? this.name,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -4292,6 +4445,9 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -4321,6 +4477,7 @@ class HarvestSeasonsCompanion extends UpdateCompanion<HarvestSeasonRow> {
   String toString() {
     return (StringBuffer('HarvestSeasonsCompanion(')
           ..write('id: $id, ')
+          ..write('code: $code, ')
           ..write('name: $name, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -4360,6 +4517,17 @@ class $MeasurementUnitsTable extends MeasurementUnits
     ),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _abbreviationMeta = const VerificationMeta(
+    'abbreviation',
+  );
+  @override
+  late final GeneratedColumn<String> abbreviation = GeneratedColumn<String>(
+    'abbreviation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
@@ -4424,6 +4592,7 @@ class $MeasurementUnitsTable extends MeasurementUnits
   List<GeneratedColumn> get $columns => [
     id,
     code,
+    abbreviation,
     name,
     kilogramsEquivalent,
     active,
@@ -4454,6 +4623,15 @@ class $MeasurementUnitsTable extends MeasurementUnits
       );
     } else if (isInserting) {
       context.missing(_codeMeta);
+    }
+    if (data.containsKey('abbreviation')) {
+      context.handle(
+        _abbreviationMeta,
+        abbreviation.isAcceptableOrUnknown(
+          data['abbreviation']!,
+          _abbreviationMeta,
+        ),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -4502,6 +4680,7 @@ class $MeasurementUnitsTable extends MeasurementUnits
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {code},
+    {abbreviation},
   ];
   @override
   MeasurementUnitRow map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -4515,6 +4694,10 @@ class $MeasurementUnitsTable extends MeasurementUnits
         DriftSqlType.string,
         data['${effectivePrefix}code'],
       )!,
+      abbreviation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}abbreviation'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -4547,7 +4730,15 @@ class $MeasurementUnitsTable extends MeasurementUnits
 class MeasurementUnitRow extends DataClass
     implements Insertable<MeasurementUnitRow> {
   final String id;
+
+  /// Correlativo de registro asignado por el sistema (`UNI-###`).
   final String code;
+
+  /// Abreviatura visible y editable por el usuario (`kg`, `cajón`, `ton`).
+  ///
+  /// Es la que se muestra junto a las cantidades y la que el usuario necesita
+  /// para crear sus propias unidades y convertirlas a kilogramos.
+  final String? abbreviation;
   final String name;
   final double? kilogramsEquivalent;
   final bool active;
@@ -4556,6 +4747,7 @@ class MeasurementUnitRow extends DataClass
   const MeasurementUnitRow({
     required this.id,
     required this.code,
+    this.abbreviation,
     required this.name,
     this.kilogramsEquivalent,
     required this.active,
@@ -4567,6 +4759,9 @@ class MeasurementUnitRow extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['code'] = Variable<String>(code);
+    if (!nullToAbsent || abbreviation != null) {
+      map['abbreviation'] = Variable<String>(abbreviation);
+    }
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || kilogramsEquivalent != null) {
       map['kilograms_equivalent'] = Variable<double>(kilogramsEquivalent);
@@ -4581,6 +4776,9 @@ class MeasurementUnitRow extends DataClass
     return MeasurementUnitsCompanion(
       id: Value(id),
       code: Value(code),
+      abbreviation: abbreviation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(abbreviation),
       name: Value(name),
       kilogramsEquivalent: kilogramsEquivalent == null && nullToAbsent
           ? const Value.absent()
@@ -4599,6 +4797,7 @@ class MeasurementUnitRow extends DataClass
     return MeasurementUnitRow(
       id: serializer.fromJson<String>(json['id']),
       code: serializer.fromJson<String>(json['code']),
+      abbreviation: serializer.fromJson<String?>(json['abbreviation']),
       name: serializer.fromJson<String>(json['name']),
       kilogramsEquivalent: serializer.fromJson<double?>(
         json['kilogramsEquivalent'],
@@ -4614,6 +4813,7 @@ class MeasurementUnitRow extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'code': serializer.toJson<String>(code),
+      'abbreviation': serializer.toJson<String?>(abbreviation),
       'name': serializer.toJson<String>(name),
       'kilogramsEquivalent': serializer.toJson<double?>(kilogramsEquivalent),
       'active': serializer.toJson<bool>(active),
@@ -4625,6 +4825,7 @@ class MeasurementUnitRow extends DataClass
   MeasurementUnitRow copyWith({
     String? id,
     String? code,
+    Value<String?> abbreviation = const Value.absent(),
     String? name,
     Value<double?> kilogramsEquivalent = const Value.absent(),
     bool? active,
@@ -4633,6 +4834,7 @@ class MeasurementUnitRow extends DataClass
   }) => MeasurementUnitRow(
     id: id ?? this.id,
     code: code ?? this.code,
+    abbreviation: abbreviation.present ? abbreviation.value : this.abbreviation,
     name: name ?? this.name,
     kilogramsEquivalent: kilogramsEquivalent.present
         ? kilogramsEquivalent.value
@@ -4645,6 +4847,9 @@ class MeasurementUnitRow extends DataClass
     return MeasurementUnitRow(
       id: data.id.present ? data.id.value : this.id,
       code: data.code.present ? data.code.value : this.code,
+      abbreviation: data.abbreviation.present
+          ? data.abbreviation.value
+          : this.abbreviation,
       name: data.name.present ? data.name.value : this.name,
       kilogramsEquivalent: data.kilogramsEquivalent.present
           ? data.kilogramsEquivalent.value
@@ -4660,6 +4865,7 @@ class MeasurementUnitRow extends DataClass
     return (StringBuffer('MeasurementUnitRow(')
           ..write('id: $id, ')
           ..write('code: $code, ')
+          ..write('abbreviation: $abbreviation, ')
           ..write('name: $name, ')
           ..write('kilogramsEquivalent: $kilogramsEquivalent, ')
           ..write('active: $active, ')
@@ -4673,6 +4879,7 @@ class MeasurementUnitRow extends DataClass
   int get hashCode => Object.hash(
     id,
     code,
+    abbreviation,
     name,
     kilogramsEquivalent,
     active,
@@ -4685,6 +4892,7 @@ class MeasurementUnitRow extends DataClass
       (other is MeasurementUnitRow &&
           other.id == this.id &&
           other.code == this.code &&
+          other.abbreviation == this.abbreviation &&
           other.name == this.name &&
           other.kilogramsEquivalent == this.kilogramsEquivalent &&
           other.active == this.active &&
@@ -4695,6 +4903,7 @@ class MeasurementUnitRow extends DataClass
 class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
   final Value<String> id;
   final Value<String> code;
+  final Value<String?> abbreviation;
   final Value<String> name;
   final Value<double?> kilogramsEquivalent;
   final Value<bool> active;
@@ -4704,6 +4913,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
   const MeasurementUnitsCompanion({
     this.id = const Value.absent(),
     this.code = const Value.absent(),
+    this.abbreviation = const Value.absent(),
     this.name = const Value.absent(),
     this.kilogramsEquivalent = const Value.absent(),
     this.active = const Value.absent(),
@@ -4714,6 +4924,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
   MeasurementUnitsCompanion.insert({
     required String id,
     required String code,
+    this.abbreviation = const Value.absent(),
     required String name,
     this.kilogramsEquivalent = const Value.absent(),
     this.active = const Value.absent(),
@@ -4728,6 +4939,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
   static Insertable<MeasurementUnitRow> custom({
     Expression<String>? id,
     Expression<String>? code,
+    Expression<String>? abbreviation,
     Expression<String>? name,
     Expression<double>? kilogramsEquivalent,
     Expression<bool>? active,
@@ -4738,6 +4950,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (code != null) 'code': code,
+      if (abbreviation != null) 'abbreviation': abbreviation,
       if (name != null) 'name': name,
       if (kilogramsEquivalent != null)
         'kilograms_equivalent': kilogramsEquivalent,
@@ -4751,6 +4964,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
   MeasurementUnitsCompanion copyWith({
     Value<String>? id,
     Value<String>? code,
+    Value<String?>? abbreviation,
     Value<String>? name,
     Value<double?>? kilogramsEquivalent,
     Value<bool>? active,
@@ -4761,6 +4975,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
     return MeasurementUnitsCompanion(
       id: id ?? this.id,
       code: code ?? this.code,
+      abbreviation: abbreviation ?? this.abbreviation,
       name: name ?? this.name,
       kilogramsEquivalent: kilogramsEquivalent ?? this.kilogramsEquivalent,
       active: active ?? this.active,
@@ -4778,6 +4993,9 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
     }
     if (code.present) {
       map['code'] = Variable<String>(code.value);
+    }
+    if (abbreviation.present) {
+      map['abbreviation'] = Variable<String>(abbreviation.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -4805,6 +5023,7 @@ class MeasurementUnitsCompanion extends UpdateCompanion<MeasurementUnitRow> {
     return (StringBuffer('MeasurementUnitsCompanion(')
           ..write('id: $id, ')
           ..write('code: $code, ')
+          ..write('abbreviation: $abbreviation, ')
           ..write('name: $name, ')
           ..write('kilogramsEquivalent: $kilogramsEquivalent, ')
           ..write('active: $active, ')
@@ -5530,6 +5749,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_farmers_document',
     'CREATE INDEX idx_farmers_document ON farmers (document_number)',
   );
+  late final Index idxFarmersCode = Index(
+    'idx_farmers_code',
+    'CREATE INDEX idx_farmers_code ON farmers (code)',
+  );
   late final Index idxParcelsStatus = Index(
     'idx_parcels_status',
     'CREATE INDEX idx_parcels_status ON parcels (status)',
@@ -5609,6 +5832,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     productionEstimates,
     idxFarmersName,
     idxFarmersDocument,
+    idxFarmersCode,
     idxParcelsStatus,
     idxParcelOwnersFarmer,
     idxVertexPhotosVertex,
@@ -5661,6 +5885,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 
 typedef $$FarmersTableCreateCompanionBuilder = FarmersCompanion Function({
   required String id,
+  Value<String?> code,
   required String firstName,
   required String lastName,
   Value<String?> documentNumber,
@@ -5675,6 +5900,7 @@ typedef $$FarmersTableCreateCompanionBuilder = FarmersCompanion Function({
 });
 typedef $$FarmersTableUpdateCompanionBuilder = FarmersCompanion Function({
   Value<String> id,
+  Value<String?> code,
   Value<String> firstName,
   Value<String> lastName,
   Value<String?> documentNumber,
@@ -5722,6 +5948,11 @@ class $$FarmersTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5815,6 +6046,11 @@ class $$FarmersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get firstName => $composableBuilder(
     column: $table.firstName,
     builder: (column) => ColumnOrderings(column),
@@ -5877,6 +6113,9 @@ class $$FarmersTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   GeneratedColumn<String> get firstName =>
       $composableBuilder(column: $table.firstName, builder: (column) => column);
@@ -5965,6 +6204,7 @@ class $$FarmersTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<String> firstName = const Value.absent(),
                 Value<String> lastName = const Value.absent(),
                 Value<String?> documentNumber = const Value.absent(),
@@ -5978,6 +6218,7 @@ class $$FarmersTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => FarmersCompanion(
                 id: id,
+                code: code,
                 firstName: firstName,
                 lastName: lastName,
                 documentNumber: documentNumber,
@@ -5993,6 +6234,7 @@ class $$FarmersTableTableManager
           createCompanionCallback:
               ({
                 required String id,
+                Value<String?> code = const Value.absent(),
                 required String firstName,
                 required String lastName,
                 Value<String?> documentNumber = const Value.absent(),
@@ -6006,6 +6248,7 @@ class $$FarmersTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => FarmersCompanion.insert(
                 id: id,
+                code: code,
                 firstName: firstName,
                 lastName: lastName,
                 documentNumber: documentNumber,
@@ -8070,6 +8313,7 @@ typedef $$VertexPhotosTableProcessedTableManager =
 typedef $$GrapeVarietiesTableCreateCompanionBuilder =
     GrapeVarietiesCompanion Function({
       required String id,
+      Value<String?> code,
       required String name,
       Value<String?> category,
       Value<String?> description,
@@ -8082,6 +8326,7 @@ typedef $$GrapeVarietiesTableCreateCompanionBuilder =
 typedef $$GrapeVarietiesTableUpdateCompanionBuilder =
     GrapeVarietiesCompanion Function({
       Value<String> id,
+      Value<String?> code,
       Value<String> name,
       Value<String?> category,
       Value<String?> description,
@@ -8158,6 +8403,11 @@ class $$GrapeVarietiesTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8261,6 +8511,11 @@ class $$GrapeVarietiesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -8308,6 +8563,9 @@ class $$GrapeVarietiesTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -8418,6 +8676,7 @@ class $$GrapeVarietiesTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> category = const Value.absent(),
                 Value<String?> description = const Value.absent(),
@@ -8428,6 +8687,7 @@ class $$GrapeVarietiesTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => GrapeVarietiesCompanion(
                 id: id,
+                code: code,
                 name: name,
                 category: category,
                 description: description,
@@ -8440,6 +8700,7 @@ class $$GrapeVarietiesTableTableManager
           createCompanionCallback:
               ({
                 required String id,
+                Value<String?> code = const Value.absent(),
                 required String name,
                 Value<String?> category = const Value.absent(),
                 Value<String?> description = const Value.absent(),
@@ -8450,6 +8711,7 @@ class $$GrapeVarietiesTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => GrapeVarietiesCompanion.insert(
                 id: id,
+                code: code,
                 name: name,
                 category: category,
                 description: description,
@@ -8993,6 +9255,7 @@ typedef $$ParcelVarietiesTableProcessedTableManager =
 typedef $$HarvestSeasonsTableCreateCompanionBuilder =
     HarvestSeasonsCompanion Function({
       required String id,
+      Value<String?> code,
       required String name,
       Value<DateTime?> startDate,
       Value<DateTime?> endDate,
@@ -9004,6 +9267,7 @@ typedef $$HarvestSeasonsTableCreateCompanionBuilder =
 typedef $$HarvestSeasonsTableUpdateCompanionBuilder =
     HarvestSeasonsCompanion Function({
       Value<String> id,
+      Value<String?> code,
       Value<String> name,
       Value<DateTime?> startDate,
       Value<DateTime?> endDate,
@@ -9058,6 +9322,11 @@ class $$HarvestSeasonsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9131,6 +9400,11 @@ class $$HarvestSeasonsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -9173,6 +9447,9 @@ class $$HarvestSeasonsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -9250,6 +9527,7 @@ class $$HarvestSeasonsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
+                Value<String?> code = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<DateTime?> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
@@ -9259,6 +9537,7 @@ class $$HarvestSeasonsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => HarvestSeasonsCompanion(
                 id: id,
+                code: code,
                 name: name,
                 startDate: startDate,
                 endDate: endDate,
@@ -9270,6 +9549,7 @@ class $$HarvestSeasonsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
+                Value<String?> code = const Value.absent(),
                 required String name,
                 Value<DateTime?> startDate = const Value.absent(),
                 Value<DateTime?> endDate = const Value.absent(),
@@ -9279,6 +9559,7 @@ class $$HarvestSeasonsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => HarvestSeasonsCompanion.insert(
                 id: id,
+                code: code,
                 name: name,
                 startDate: startDate,
                 endDate: endDate,
@@ -9350,6 +9631,7 @@ typedef $$MeasurementUnitsTableCreateCompanionBuilder =
     MeasurementUnitsCompanion Function({
       required String id,
       required String code,
+      Value<String?> abbreviation,
       required String name,
       Value<double?> kilogramsEquivalent,
       Value<bool> active,
@@ -9361,6 +9643,7 @@ typedef $$MeasurementUnitsTableUpdateCompanionBuilder =
     MeasurementUnitsCompanion Function({
       Value<String> id,
       Value<String> code,
+      Value<String?> abbreviation,
       Value<String> name,
       Value<double?> kilogramsEquivalent,
       Value<bool> active,
@@ -9423,6 +9706,11 @@ class $$MeasurementUnitsTableFilterComposer
 
   ColumnFilters<String> get code => $composableBuilder(
     column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9496,6 +9784,11 @@ class $$MeasurementUnitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -9536,6 +9829,11 @@ class $$MeasurementUnitsTableAnnotationComposer
 
   GeneratedColumn<String> get code =>
       $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get abbreviation => $composableBuilder(
+    column: $table.abbreviation,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
@@ -9613,6 +9911,7 @@ class $$MeasurementUnitsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> code = const Value.absent(),
+                Value<String?> abbreviation = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<double?> kilogramsEquivalent = const Value.absent(),
                 Value<bool> active = const Value.absent(),
@@ -9622,6 +9921,7 @@ class $$MeasurementUnitsTableTableManager
               }) => MeasurementUnitsCompanion(
                 id: id,
                 code: code,
+                abbreviation: abbreviation,
                 name: name,
                 kilogramsEquivalent: kilogramsEquivalent,
                 active: active,
@@ -9633,6 +9933,7 @@ class $$MeasurementUnitsTableTableManager
               ({
                 required String id,
                 required String code,
+                Value<String?> abbreviation = const Value.absent(),
                 required String name,
                 Value<double?> kilogramsEquivalent = const Value.absent(),
                 Value<bool> active = const Value.absent(),
@@ -9642,6 +9943,7 @@ class $$MeasurementUnitsTableTableManager
               }) => MeasurementUnitsCompanion.insert(
                 id: id,
                 code: code,
+                abbreviation: abbreviation,
                 name: name,
                 kilogramsEquivalent: kilogramsEquivalent,
                 active: active,

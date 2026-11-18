@@ -109,19 +109,17 @@ class _SeasonTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final range = _range(season);
     final notes = season.notes;
+    final lines = [
+      ?season.code,
+      ?range,
+      if (notes != null && notes.isNotEmpty) notes,
+    ];
     return Card(
       child: ListTile(
         leading: const CircleAvatar(child: Icon(Icons.event_outlined)),
         title: Text(season.name),
-        subtitle: range == null && (notes == null || notes.isEmpty)
-            ? null
-            : Text(
-                [
-                  ?range,
-                  if (notes != null && notes.isNotEmpty) notes,
-                ].join('\n'),
-              ),
-        isThreeLine: range != null && notes != null && notes.isNotEmpty,
+        subtitle: lines.isEmpty ? null : Text(lines.join('\n')),
+        isThreeLine: lines.length >= 3,
         onTap: onEdit,
         trailing: PopupMenuButton<String>(
           tooltip: 'Acciones',
@@ -183,6 +181,7 @@ class _SeasonFormDialog extends ConsumerStatefulWidget {
 }
 
 class _SeasonFormDialogState extends ConsumerState<_SeasonFormDialog> {
+  late final TextEditingController _code;
   late final TextEditingController _name;
   late final TextEditingController _notes;
   DateTime? _startDate;
@@ -193,14 +192,24 @@ class _SeasonFormDialogState extends ConsumerState<_SeasonFormDialog> {
   void initState() {
     super.initState();
     final season = widget.season;
+    _code = TextEditingController(text: season?.code ?? '');
     _name = TextEditingController(text: season?.name ?? '');
     _notes = TextEditingController(text: season?.notes ?? '');
     _startDate = season?.startDate?.toLocal();
     _endDate = season?.endDate?.toLocal();
+    if (season == null) _loadNextCode();
+  }
+
+  Future<void> _loadNextCode() async {
+    final code = await ref.read(harvestSeasonRepositoryProvider).nextCode();
+    if (mounted && _code.text.isEmpty) {
+      setState(() => _code.text = code);
+    }
   }
 
   @override
   void dispose() {
+    _code.dispose();
     _name.dispose();
     _notes.dispose();
     super.dispose();
@@ -246,6 +255,7 @@ class _SeasonFormDialogState extends ConsumerState<_SeasonFormDialog> {
     final existing = widget.season;
     final season = HarvestSeason(
       id: existing?.id ?? const Uuid().v4(),
+      code: _code.text.trim(),
       name: _name.text.trim(),
       startDate: start,
       endDate: end,
@@ -272,6 +282,17 @@ class _SeasonFormDialogState extends ConsumerState<_SeasonFormDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            TextField(
+              controller: _code,
+              readOnly: true,
+              canRequestFocus: false,
+              decoration: const InputDecoration(
+                labelText: 'Código',
+                helperText: 'COD · asignado por el sistema',
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _name,
               decoration: const InputDecoration(
@@ -432,7 +453,7 @@ class _UnitTile extends ConsumerWidget {
             Flexible(child: Text(unit.name)),
             const SizedBox(width: 8),
             Chip(
-              label: Text(unit.code),
+              label: Text(unit.displayAbbreviation),
               visualDensity: VisualDensity.compact,
             ),
             if (!unit.active) ...[
@@ -447,7 +468,8 @@ class _UnitTile extends ConsumerWidget {
         subtitle: Text(
           factor == null
               ? 'Factor configurable en cada estimación'
-              : '1 ${unit.code} = ${Formatters.decimal(factor)} kg',
+              : '1 ${unit.displayAbbreviation} = '
+                  '${Formatters.decimal(factor)} kg',
         ),
         onTap: onEdit,
         trailing: PopupMenuButton<String>(
@@ -483,6 +505,7 @@ class _UnitTile extends ConsumerWidget {
             MeasurementUnit(
               id: unit.id,
               code: unit.code,
+              abbreviation: unit.abbreviation,
               name: unit.name,
               kilogramsEquivalent: unit.kilogramsEquivalent,
               active: !unit.active,
@@ -532,6 +555,7 @@ class _UnitFormDialog extends ConsumerStatefulWidget {
 
 class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
   late final TextEditingController _code;
+  late final TextEditingController _abbreviation;
   late final TextEditingController _name;
   late final TextEditingController _factor;
   late bool _active;
@@ -542,6 +566,7 @@ class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
     super.initState();
     final unit = widget.unit;
     _code = TextEditingController(text: unit?.code ?? '');
+    _abbreviation = TextEditingController(text: unit?.abbreviation ?? '');
     _name = TextEditingController(text: unit?.name ?? '');
     _factor = TextEditingController(
       text: unit?.kilogramsEquivalent == null
@@ -549,24 +574,33 @@ class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
           : Formatters.plainNumber(unit!.kilogramsEquivalent),
     );
     _active = unit?.active ?? true;
+    if (unit == null) _loadNextCode();
+  }
+
+  Future<void> _loadNextCode() async {
+    final code = await ref.read(measurementUnitRepositoryProvider).nextCode();
+    if (mounted && _code.text.isEmpty) {
+      setState(() => _code.text = code);
+    }
   }
 
   @override
   void dispose() {
     _code.dispose();
+    _abbreviation.dispose();
     _name.dispose();
     _factor.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    final codeError = Validators.requiredCode(
-      _code.text,
-      message: 'Ingresa el código de la unidad.',
+    final abbreviationError = Validators.requiredText(
+      _abbreviation.text,
+      message: 'Ingresa la abreviatura de la unidad.',
       maxLength: 16,
     );
-    if (codeError != null) {
-      showMessage(context, codeError);
+    if (abbreviationError != null) {
+      showMessage(context, abbreviationError);
       return;
     }
     final nameError = Validators.requiredText(
@@ -595,6 +629,7 @@ class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
     final unit = MeasurementUnit(
       id: existing?.id ?? const Uuid().v4(),
       code: _code.text.trim(),
+      abbreviation: _abbreviation.text.trim(),
       name: _name.text.trim(),
       kilogramsEquivalent:
           rawFactor.isEmpty ? null : Validators.parsePlainDecimal(rawFactor),
@@ -621,9 +656,20 @@ class _UnitFormDialogState extends ConsumerState<_UnitFormDialog> {
           children: [
             TextField(
               controller: _code,
+              readOnly: true,
+              canRequestFocus: false,
               decoration: const InputDecoration(
                 labelText: 'Código',
-                helperText: 'Único y corto, por ejemplo kg, crate o ton',
+                helperText: 'COD · asignado por el sistema',
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _abbreviation,
+              decoration: const InputDecoration(
+                labelText: 'Abreviatura',
+                helperText: 'Única y corta, por ejemplo kg, cajón o ton',
               ),
             ),
             const SizedBox(height: 12),

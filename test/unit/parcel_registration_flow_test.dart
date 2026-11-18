@@ -60,9 +60,9 @@ void main() {
 
     final farmer = Farmer(
       id: 'farmer-1',
+      code: farmerCode,
       firstName: 'Juan',
       lastName: 'Pérez',
-      documentNumber: farmerCode,
       createdAt: now,
       updatedAt: now,
     );
@@ -98,6 +98,11 @@ void main() {
     await ownerRepo.save(owner);
 
     // Verificaciones
+    final savedFarmer = await farmerRepo.findById('farmer-1');
+    expect(savedFarmer, isNotNull);
+    expect(savedFarmer!.code, 'AGR-001');
+    expect(savedFarmer.documentNumber, isNull);
+
     final savedParcel = await parcelRepo.findById('parcel-1');
     expect(savedParcel, isNotNull);
     expect(savedParcel!.code, 'PAR-001');

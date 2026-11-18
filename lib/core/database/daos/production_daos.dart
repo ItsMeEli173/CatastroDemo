@@ -28,6 +28,19 @@ class HarvestSeasonDao extends DatabaseAccessor<AppDatabase>
             ..where((t) => t.name.lower().equals(name.trim().toLowerCase())))
           .getSingleOrNull();
 
+  Future<HarvestSeasonRow?> findByCode(String code) =>
+      (select(harvestSeasons)..where((t) => t.code.equals(code.trim())))
+          .getSingleOrNull();
+
+  /// Códigos de registro ya asignados, para no repetirlos.
+  Future<List<String>> allCodes() async {
+    final query = selectOnly(harvestSeasons)
+      ..addColumns([harvestSeasons.code])
+      ..where(harvestSeasons.code.isNotNull());
+    final rows = await query.get();
+    return [for (final row in rows) ?row.read(harvestSeasons.code)];
+  }
+
   Future<int> countEstimates(String seasonId) async {
     final countExpression = productionEstimates.id.count();
     final query = selectOnly(productionEstimates)
@@ -76,6 +89,20 @@ class MeasurementUnitDao extends DatabaseAccessor<AppDatabase>
       (select(measurementUnits)
             ..where((t) => t.code.lower().equals(code.trim().toLowerCase())))
           .getSingleOrNull();
+
+  Future<MeasurementUnitRow?> findByAbbreviation(String abbreviation) =>
+      (select(measurementUnits)
+            ..where((t) =>
+                t.abbreviation.lower().equals(abbreviation.trim().toLowerCase())))
+          .getSingleOrNull();
+
+  /// Códigos de registro ya asignados, para no repetirlos.
+  Future<List<String>> allCodes() async {
+    final query = selectOnly(measurementUnits)
+      ..addColumns([measurementUnits.code]);
+    final rows = await query.get();
+    return [for (final row in rows) ?row.read(measurementUnits.code)];
+  }
 
   Future<int> countEstimates(String unitId) async {
     final countExpression = productionEstimates.id.count();
